@@ -51,3 +51,18 @@ returning id, role;
 Vercel meng-host frontend; Supabase melayani Auth, database dan berkas privat. Pantau keduanya. Pilih kapasitas/backup Supabase sesuai penggunaan, uji pemulihan backup, dan evaluasi kuota serta email sebelum peluncuran. Rollback frontend tidak membatalkan migration database. Simpan perubahan database sebagai migration baru dan uji sebelum diterapkan.
 
 GitHub Actions menjalankan pemeriksaan dengan endpoint/API tiruan. Hasil CI tidak membuktikan login/email produksi berhasil. Status siap pakai penuh membutuhkan deployment terverifikasi dan UAT operator sekolah.
+
+## Deployment aktif — 14 November 2026
+
+Alamat produksi: https://si-stir-hebat-blue.vercel.app
+
+Deployment Vercel berstatus READY. HTTP halaman utama, /login, /jadwal dan /kata-sandi berhasil. Browser produksi ponsel berhasil menampilkan login, tidak memakai mode demo, dan mengalihkan /jadwal ke login saat belum memiliki sesi. Tidak ada akun/data pribadi yang dipakai dalam pemeriksaan ini.
+
+Langkah pemilik sekolah yang masih diperlukan:
+
+1. Supabase Authentication → URL Configuration: Site URL `https://si-stir-hebat-blue.vercel.app`; tambahkan redirect `https://si-stir-hebat-blue.vercel.app/kata-sandi`.
+2. Aktifkan administrator pertama mengikuti panduan di atas, lalu uji login dan pemulihan email.
+3. Vercel Account Settings → Login Connections: hubungkan GitHub. Integrasi repo otomatis belum berhasil karena koneksi login ini belum ada. Deployment saat ini dilakukan melalui CLI; push GitHub belum otomatis berarti produksi berubah.
+4. Jalankan UAT peran sekolah sebelum memasukkan data operasional.
+
+Konfigurasi frontend Supabase telah disimpan pada environment Production Vercel. Kredensial admin database tidak disertakan. Node produksi dikunci 24.x sesuai pengujian.
