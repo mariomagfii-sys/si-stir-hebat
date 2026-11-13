@@ -1428,3 +1428,35 @@ for (const role of ['administrator', 'teacher', 'parent', 'pending']) {
     if (role === 'administrator') await page.screenshot({ path: testInfo.outputPath('dashboard-release.png'), fullPage: true })
   })
 }
+
+test('school overview uses exact active counts and preserves unknown versus zero', async ({ page }) => {
+  await mockSchool(page)
+  let retry = false
+  for (const table of ['students', 'teachers', 'school_classes']) {
+    await page.route(`**/rest/v1/${table}?**`, async route => {
+      expect(route.request().method()).toBe('HEAD')
+      expect(new URL(route.request().url()).searchParams.get('is_active')).toBe('eq.true')
+      const count = table === 'students' ? 1205 : table === 'teachers' ? 0 : 6
+      await route.fulfill({ status: 200, headers: table === 'school_classes' && !retry ? {} : { 'content-range': `*/${count}`, 'access-control-expose-headers': 'content-range' } })
+    })
+  }
+  await page.goto('/dashboard')
+  await expect(page.getByRole('article', { name: 'Siswa aktif' })).toContainText('1205')
+  await expect(page.getByRole('article', { name: 'Guru aktif' })).toContainText('0')
+  await expect(page.getByRole('article', { name: 'Kelas aktif' })).toContainText('—')
+  await expect(page.getByRole('alert')).toContainText('Sebagian jumlah')
+  retry = true
+  await page.getByRole('button', { name: 'Muat ulang ringkasan' }).click()
+  await expect(page.getByRole('article', { name: 'Kelas aktif' })).toContainText('6')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+for (const role of ['teacher','student','parent','pending']) test(`school overview never requests registry totals for ${role}`, async ({ page }) => {
+  await mockSchool(page, { role })
+  let requested = false
+  await page.route(/\/rest\/v1\/(students|teachers|school_classes)\?/, async route => { requested = true; await route.fulfill({ status: 403, json: { code: '42501' } }) })
+  await page.goto('/dashboard')
+  await expect(page.getByRole('heading', { name: 'Akses cepat' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ringkasan data sekolah' })).toHaveCount(0)
+  expect(requested).toBe(false)
+})

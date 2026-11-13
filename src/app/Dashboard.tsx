@@ -6,6 +6,7 @@ import { getDemoAnnouncements, getDemoProfile } from '../lib/demo-auth'
 import { supabase } from '../lib/supabase'
 import { canManageAnnouncements, canReadAnnouncements, type Announcement } from '../lib/announcements'
 import { schoolRoleLabels } from '../lib/school'
+import { SchoolOverview } from './SchoolOverview'
 
 type SchoolProfile = { full_name: string; role: string }
 
@@ -90,6 +91,7 @@ function SchoolDashboard({ userId }: { userId: string }) {
       {profile && !canRead && <p className="status">Akun Anda menunggu penetapan peran sekolah. Anda tetap dapat melengkapi nama dan mengubah kata sandi melalui menu akun.</p>}
       {profile && !profile.full_name.trim() && <p className="status">Lengkapi nama agar akun Anda mudah dikenali. <Link to="/akun">Lengkapi profil</Link></p>}
       {canRead && <>
+        {profile && <SchoolOverview key={`${profile.role}-${attempt}`} role={profile.role} />}
         <div className="dashboard-stats"><article><Bell size={22}/><span>Pengumuman terbit</span><strong>{publishedCount ?? '—'}</strong></article>{canManage && <article><FileText size={22}/><span>Draf pengumuman</span><strong>{draftCount ?? '—'}</strong></article>}</div>
         {newsError && <p className="error" role="alert">{newsError}</p>}
         <section className="dashboard-news" aria-labelledby="latest-news"><div className="board-heading"><h2 id="latest-news">Kabar terbaru</h2><Link to="/pengumuman">Lihat semua <ArrowRight size={14}/></Link></div>
