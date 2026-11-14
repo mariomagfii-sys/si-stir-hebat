@@ -940,6 +940,8 @@ test('migrations and database permissions', async t => {
     assert.equal((await send()).rows[0].author_id, ids.teacher)
     await as('parent')
     assert.equal((await send()).rows[0].author_id, ids.parent)
+    await assert.rejects(db.query("insert into public.communication_messages (assignment_id,student_id,parent_profile_id,body) values ($1,$2,$3,'   ')", values), { code: '23514' })
+    await assert.rejects(db.query("insert into public.communication_messages (assignment_id,student_id,parent_profile_id,body,created_at) values ($1,$2,$3,'Data Contoh',now())", values), permissionDenied)
     assert.equal((await db.query('select * from public.communication_messages')).rows.length, 2)
     await as('teacher')
     await assert.rejects(db.query("insert into public.communication_messages (assignment_id,student_id,parent_profile_id,body) values ($1,$2,$3,'Data Contoh')", [attendanceAssignment,studentTwo,ids.parent]), permissionDenied)
@@ -986,6 +988,15 @@ test('migrations and database permissions', async t => {
     await assert.rejects(send(), permissionDenied)
     await db.exec('reset role')
     await db.query("update public.profiles set role='teacher' where id=$1", [ids.teacher])
+    await db.exec('reset role')
+    await db.query("update public.profiles set role='pending' where id=$1", [ids.parent])
+    for (const role of ['teacher','parent']) {
+      await as(role)
+      assert.equal((await db.query('select * from public.communication_messages')).rows.length, 0)
+      await assert.rejects(send(), permissionDenied)
+    }
+    await db.exec('reset role')
+    await db.query("update public.profiles set role='parent' where id=$1", [ids.parent])
     await as('administrator')
     await db.query('select public.set_account_relationship($1,$2,$3,$4,$5)', ['parent',studentOne,ids.parent,false,'Data Contoh valid'])
     for (const role of ['teacher','parent']) {

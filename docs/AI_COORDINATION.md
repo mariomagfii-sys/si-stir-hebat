@@ -128,3 +128,5 @@ Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `
 3. Migration `20261114083827_komunikasi.sql` menunggu penerapan. Hosted memiliki 23 migration dan belum mencatat `20261114000139_student_habits`, yang lebih awal; tidak melewati celah urutan sebelum penanganan. Struktur referensi dan nama objek diperiksa tanpa membaca data pengguna. Advisor dan `check:supabase` sesudah penerapan belum dijalankan.
 
 Berkas: `supabase/migrations/20261114083827_komunikasi.sql`, `src/features/komunikasi/api/index.ts`, `tests/database.test.mjs`, `tests/communication.test.mjs`, `docs/DECISIONS.md`, `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_LOG.md`, `docs/AI_COORDINATION.md`.
+
+- Tambahan verifikasi C1: perubahan peran wali, pesan kosong dan pemalsuan waktu ditolak. Tes PGlite dan `npm run check` terakhir lulus (108 tes, lint, typecheck, build; mesin PDF masih memberi peringatan ukuran). Tidak ada perubahan hosted.
