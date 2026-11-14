@@ -7,7 +7,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 | C1 | Modul Komunikasi (pesan/pemberitahuan guru–wali): migration + RLS + API | Codex | TODO | | |
 | C2 | Modul Administrasi Dokumen (metadata dokumen, kategori, akses per peran) | Codex | TODO | | |
 | C3 | Telaah celah PRD vs fitur terpasang, urutkan prioritas | Codex | BLOCKED | ai/codex-pdf-splitting | Daftar sementara tersedia; PRD dan RBAC asli tidak ditemukan. |
-| C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | REVIEW | ai/codex-pdf-splitting | Font 855,16 ? 419,57 KB; mesin tetap lazy dan 790,69 KB. |
+| C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | REVIEW | ai/codex-pdf-splitting | Font 855,16 ke 419,57 KB; mesin tetap lazy dan 790,69 KB. |
 | U1 | UI modul Komunikasi (setelah C1 REVIEW) | Cursor | TODO | | |
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
 | U3 | Audit responsif & aksesibilitas semua halaman | Cursor | DOING | ai/cursor-akses-status | Cursor |
@@ -84,27 +84,27 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
 - Verifikasi: Node 24 `npm run check` lulus; jalankan `npm run test:browser` terpisah dan simpan log lengkap. Jangan menganggap proses yang dihentikan sebagai suite lulus.
 
-### C4 ? Pengurangan font PDF
+### C4 - Pengurangan font PDF
 
 1. Mesin dan font sebelumnya sudah diimpor dinamis; build kini hanya membundel Roboto normal dan tebal yang digunakan laporan.
-2. Chunk font 855,16 ? 419,57 KB (gzip 465,45 ? 225,08 KB); mesin 790,69 KB masih memberi peringatan Vite. Jika laporan kelak memakai italic, font tersebut harus ditambahkan kembali.
+2. Chunk font 855,16 ke 419,57 KB (gzip 465,45 ke 225,08 KB); mesin 790,69 KB masih memberi peringatan Vite. Jika laporan kelak memakai italic, font tersebut harus ditambahkan kembali.
 3. `npm run check` Node 24 lulus: lint, typecheck, 104 tes, build; unduhan PDF desktop dan ponsel masing-masing lulus dengan API tiruan.
 
 Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_LOG.md`.
 
-### C3 ? Telaah parsial
+### C3 - Telaah parsial
 
 1. Rute dan catatan proyek dibandingkan; daftar prioritas sementara ditambahkan ke status proyek.
 2. PRD/RBAC asli tidak tersedia, sehingga kesesuaian penuh dan kewenangan resmi tidak dapat diverifikasi.
 3. Berkas: `docs/PROJECT_STATUS.md`, `docs/AI_COORDINATION.md`; tidak ada perubahan kode atau tes pada telaah ini.
 
-### T1 ? Hasil sesi ini
+### T1 - Hasil sesi ini
 
 - Playwright menjalankan 180 skenario dengan API tiruan. Teramati gagal: impor XLSX desktop dan ekspor akademik PDF desktop. Hasil akhir agregat tidak tersedia: proses tertahan setelah seluruh nomor skenario tampil dan dihentikan.
 - Pengulangan terarah pada port terpisah menampilkan lulus untuk masing-masing skenario pada desktop dan ponsel, tetapi kedua proses juga tertahan saat penutupan dan dihentikan; ini bukan suite penuh yang lulus. Server Vite mengalami perubahan konfigurasi selama suite dan tes berjalan paralel, sehingga penyebab kegagalan belum dipastikan.
 - `tests/browser/app.spec.ts` sudah memiliki perubahan staged dan unstaged sebelum sesi; tidak diubah atau di-commit oleh Codex.
 
-### Log Sesi ? checkpoint 14 November 2026
+### Log Sesi - checkpoint 14 November 2026
 
 - C4 REVIEW: font PDF diperkecil dan `npm run check` lulus; C3 BLOCKED sebagian karena acuan hilang; T1 BLOCKED karena hasil suite dan teardown. Tugas lainnya belum dikerjakan dalam sesi ini.
 - Tidak membuat atau menerapkan migration; advisor dan `check:supabase` tidak dijalankan. Migration `20261114000139_student_habits` sebelumnya tercatat menunggu penerapan, belum diverifikasi ulang.

@@ -330,6 +330,6 @@ npm run check Node24 lulus 101 tes, lint, tipe dan build. Sepuluh tes browser kh
 Deployment ringkasan dashboard terverifikasi READY; smoke produksi anonim lulus ulang. Tidak menguji akun admin nyata.
 
 
-## Optimasi font PDF ? 14 November 2026
+## Optimasi font PDF - 14 November 2026
 
-Build hanya menyertakan Roboto normal dan tebal untuk rekap akademik, tetap dimuat saat ekspor. Chunk font 855,16 ? 419,57 KB (gzip 465,45 ? 225,08 KB); mesin PDF masih 790,69 KB. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan desktop dan ponsel lulus dengan API tiruan. Varian italic perlu ditambahkan jika kelak digunakan. UAT sekolah belum dilakukan.
+Build hanya menyertakan Roboto normal dan tebal untuk rekap akademik, tetap dimuat saat ekspor. Chunk font 855,16 ke 419,57 KB (gzip 465,45 ke 225,08 KB); mesin PDF masih 790,69 KB. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan desktop dan ponsel lulus dengan API tiruan. Varian italic perlu ditambahkan jika kelak digunakan. UAT sekolah belum dilakukan.
