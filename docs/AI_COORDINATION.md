@@ -12,7 +12,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
 | U3 | Audit responsif & aksesibilitas semua halaman | Cursor | DOING | ai/cursor-akses-status | Cursor |
 | U4 | Konsistensi empty/loading/error state | Cursor | DOING | ai/cursor-akses-status | Cursor |
-| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Codex (mengambil alih) | DOING | ai/codex-pdf-splitting | Mengulang suite terisolasi; perubahan tes yang sudah ada dipertahankan. |
+| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Codex (mengambil alih) | BLOCKED | ai/codex-pdf-splitting | Suite 178 lulus, 2 timeout; pengulangan 1 lulus dan 1 timeout. |
 | T2 | Tambah tes unit untuk util/validator yang belum tercakup | Copilot | REVIEW | ai/copilot-fix-browser-alerts | 3 tes demo-auth baru; npm run check lulus (104 tes). |
 | T3 | Tes browser untuk Komunikasi & Dokumen (setelah UI REVIEW) | Copilot | TODO | | |
 | Q1 | Review keamanan RLS/grant semua migration (laporan, bukan perubahan) | Qoder | REVIEW | ai/qoder-review-qa | Laporan `docs/SECURITY_REVIEW.md`; tidak ada klaim aman. |
@@ -80,9 +80,9 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 ## Lanjutan
 
-- Aktif: T1; suite terisolasi berjalan pada port 5197 dan log test-results-t1.log; lanjutkan diagnosis teardown lalu C1. C4 siap ditinjau.
+- Aktif berikutnya: C1; T1 BLOCKED karena timeout lingkungan. Periksa dulu perubahan paralel pada workspace; gunakan pola penugasan aktif dan relasi wali terverifikasi. C4 siap ditinjau.
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
-- Verifikasi: Node 24 `npm run check` lulus; jalankan `npm run test:browser` terpisah dan simpan log lengkap. Jangan menganggap proses yang dihentikan sebagai suite lulus.
+- Verifikasi: Node 24 `npm run check` terakhir lulus 104 tes sebelum perubahan paralel; suite browser 178 lulus dan 2 gagal, lihat `test-results-t1-external.log`. Ulangi pada lingkungan stabil sebelum menyatakan T1 selesai.
 
 ### C4 - Pengurangan font PDF
 
@@ -109,3 +109,14 @@ Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `
 - C4 REVIEW: font PDF diperkecil dan `npm run check` lulus; C3 BLOCKED sebagian karena acuan hilang; T1 BLOCKED karena hasil suite dan teardown. Tugas lainnya belum dikerjakan dalam sesi ini.
 - Tidak membuat atau menerapkan migration; advisor dan `check:supabase` tidak dijalankan. Migration `20261114000139_student_habits` sebelumnya tercatat menunggu penerapan, belum diverifikasi ulang.
 - Branch `ai/codex-pdf-splitting`; tidak ada branch `main` lokal. Perubahan tes pengguna tetap staged dan unstaged. Tidak merge atau push. Auth/redirect, aktivasi admin, email dan UAT akun sekolah tetap memerlukan pemilik.
+
+### T1 - run ulang 14 November
+
+- Suite browser dengan server Vite terpisah selesai: 178 lulus dan 2 gagal. Kedua kegagalan ponsel terjadi pada timeout beforeEach atau teardown, bukan assertion selector. Log: `test-results-t1-external.log`; fixture API tiruan.
+- Pengulangan dua skenario: dashboard administrator lulus; akses asesmen wali kembali timeout pada `page.goto`. Hasil ini tidak mengubah angka suite penuh.
+- `tests/browser/app.spec.ts` tetap perubahan milik sesi lain. Tidak mengklaim suite lulus. `npm run check` tidak diulang pada sesi ini.
+
+### Log Sesi - lanjutan
+
+- Runtime alat terputus saat browser berjalan; setelah kembali, jam 15:32 WIB. C1/C2 dan UI belum dikerjakan, tidak ada migration baru atau perubahan hosted.
+- Workspace memperoleh dokumen audit dari sesi paralel; semuanya dipertahankan. Branch `ai/codex-pdf-splitting`, tidak ada merge. Pengaturan Auth/redirect, aktivasi admin dan UAT sekolah tetap tugas pemilik.
