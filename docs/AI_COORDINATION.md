@@ -137,3 +137,10 @@ Berkas: `supabase/migrations/20261114083827_komunikasi.sql`, `src/features/komun
 - Security Advisor hosted tidak melaporkan temuan. Pemeriksaan ini terhadap skema yang sudah ada; tidak mencakup migration komunikasi yang masih lokal. Tidak memverifikasi email nyata, sesi akun sekolah, atau UAT.
 
 - API komunikasi menyediakan pencarian pesan berdasarkan ID untuk menangani respons hilang. UI lanjutan harus mempertahankan ID dan isian, serta tidak menganggap hasil kosong sebagai bukti gagal kirim: akses bisa saja dicabut. Tes API dan `npm run check` terakhir lulus 109 tes.
+
+### Penutupan lanjutan - 14 November 2026
+
+- Selesai untuk review lokal: C4 dan C1. T1 BLOCKED (178 lulus, 2 timeout pada run penuh); C3 parsial/BLOCKED karena acuan asli tidak tersedia. U1, C2, U2, T3 dan sisa tugas belum dikerjakan pada sesi ini.
+- Migration baru `20261114083827_komunikasi` belum diterapkan; `20261114000139_student_habits` yang lebih awal juga belum tercatat hosted. Metadata hosted dicek tanpa membaca baris data. Advisor skema hosted saat ini kosong; `check:supabase` lulus setelah akses jaringan tersedia, tanpa mencakup komunikasi.
+- Pemeriksaan terakhir `npm run check` Node 24 lulus 109 tes, lint, typecheck dan build; peringatan mesin PDF masih ada. Browser memakai API tiruan dan tidak lulus penuh. Auth/redirect, aktivasi admin, email dan UAT akun sekolah tetap perlu pemilik.
+- Branch `ai/codex-pdf-splitting`, belum di-merge karena `main` lokal tidak ada. File browser staged serta dokumen audit dan log sesi lain dipertahankan. Lanjutan: susun UI U1, termasuk pemulihan respons hilang, lalu C2; selaraskan urutan migration sebelum penerapan.
