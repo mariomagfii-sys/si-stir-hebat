@@ -78,3 +78,7 @@ Master prompt adalah sumber kebutuhan yang tersedia. Delapan dokumen rinci yang 
 
 
 13 November 2026: Pengelolaan usulan jadwal mengikuti PRD (admin mengatur jadwal utama; guru mengusulkan). Implementasi awal memakai perubahan seluruh rentang, satu pending per jadwal, keputusan admin dengan alasan, tanpa pemecahan periode otomatis atau penarikan oleh guru. Snapshot/revisi melindungi perubahan admin yang lebih baru. Skema penilaian sementara tetap tidak berubah.
+
+## Komunikasi guru dan wali - rancangan sementara
+
+Sampai PRD dan RBAC asli tersedia, usulan paling terbatas adalah pesan teks antar guru yang memiliki penugasan aktif dan wali yang memiliki hubungan terverifikasi dengan siswa aktif pada kelas tersebut. Akses hilang ketika penugasan, keanggotaan, relasi, atau peran tidak lagi berlaku; siswa, pending, anonim, admin dan kepala sekolah tidak mendapat akses otomatis. Pesan bersifat append-only dengan penulis dan waktu server sebagai riwayat; tidak ada lampiran atau notifikasi eksternal. Ini bukan keputusan kebijakan resmi. Pertanyaan terbuka: retensi, kebutuhan akses pengawasan, penarikan pesan, pemberitahuan, dan masa berlaku komunikasi setelah hubungan berakhir.

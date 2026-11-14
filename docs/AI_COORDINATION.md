@@ -80,7 +80,7 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 ## Lanjutan
 
-- Aktif berikutnya: C1; T1 BLOCKED karena timeout lingkungan. Periksa dulu perubahan paralel pada workspace; gunakan pola penugasan aktif dan relasi wali terverifikasi. C4 siap ditinjau.
+- Aktif: C1; T1 BLOCKED karena timeout lingkungan. Fondasi komunikasi lokal sedang dibuat; jangan terapkan sebelum tes, check dan pemeriksaan hosted. C4 siap ditinjau.
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
 - Verifikasi: Node 24 `npm run check` terakhir lulus 104 tes sebelum perubahan paralel; suite browser 178 lulus dan 2 gagal, lihat `test-results-t1-external.log`. Ulangi pada lingkungan stabil sebelum menyatakan T1 selesai.
 
