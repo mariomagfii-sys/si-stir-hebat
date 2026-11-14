@@ -7,7 +7,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 | C1 | Modul Komunikasi (pesan/pemberitahuan guru–wali): migration + RLS + API | Codex | TODO | | |
 | C2 | Modul Administrasi Dokumen (metadata dokumen, kategori, akses per peran) | Codex | TODO | | |
 | C3 | Telaah celah PRD vs fitur terpasang, urutkan prioritas | Codex | TODO | | |
-| C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | TODO | | |
+| C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | DOING | ai/codex-pdf-splitting | Mesin dan font sudah lazy; mengurangi varian font yang dibundel. |
 | U1 | UI modul Komunikasi (setelah C1 REVIEW) | Cursor | TODO | | |
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
 | U3 | Audit responsif & aksesibilitas semua halaman | Cursor | DOING | ai/cursor-akses-status | Cursor |
@@ -73,3 +73,13 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 1. **T1 (Copilot)** — Tidak ditemukan bug pada `tests/browser/app.spec.ts`; assertion alert sudah ter-scope (`summary.getByRole('alert')`, `getByRole('alertdialog')`, teks spesifik). `npx playwright test --list` mengonfirmasi 180 tes, tetapi tidak ada log run penuh di repo; reviewer tidak menjalankan ulang suite. Ringkasan T1 masih menulis 101 tes; run Qoder menunjukkan 104. Terima REVIEW jika log run dilampirkan.
 2. **T2 (Copilot)** — Tiga tes `tests/demo-auth.test.mjs` relevan dan lulus (bagian dari 104). Temuan keamanan terpisah: `src/lib/demo-auth.ts` + `src/app/Account.tsx:38` mengaktifkan akun hardcoded dan sesi `localStorage` ketika konfigurasi Supabase tidak valid; build produksi salah konfigurasi dapat menampilkan data sintetis. Perlu keputusan Codex/Cursor (batasi ke `import.meta.env.DEV` atau gagalkan build). Tes belum menutup kondisi ini.
 3. **Q1–Q3 (Qoder)** — Q1 laporan tanpa klaim aman; Q2 diuji `npm run check` 104/104; Q3 belum dijalankan pada akun nyata. Tidak ada perubahan kode/migration. **U3/U4 (Cursor)** masih DOING, belum ditelaah; periksa regresi 390px serta state loading/error setelah REVIEW.
+
+## Log Sesi
+
+- 14 November 2026 12:49 WIB: mulai audit; branch `ai/codex-pdf-splitting`. Perubahan bertahap dan belum bertahap pada `tests/browser/app.spec.ts` sudah ada dan dipertahankan. Tidak ada branch `main` lokal.
+
+## Lanjutan
+
+- Aktif: C4; verifikasi font PDF normal/tebal, ukuran build dan tes unduhan browser.
+- Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`; perubahan tes browser milik sesi lain jangan ditimpa.
+- Verifikasi: `npm run check` pada Node 24 dan tes browser PDF; suite penuh T1 sedang berjalan dengan API tiruan.
