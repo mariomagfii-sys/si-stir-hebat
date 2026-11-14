@@ -130,3 +130,8 @@ Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `
 Berkas: `supabase/migrations/20261114083827_komunikasi.sql`, `src/features/komunikasi/api/index.ts`, `tests/database.test.mjs`, `tests/communication.test.mjs`, `docs/DECISIONS.md`, `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_LOG.md`, `docs/AI_COORDINATION.md`.
 
 - Tambahan verifikasi C1: perubahan peran wali, pesan kosong dan pemalsuan waktu ditolak. Tes PGlite dan `npm run check` terakhir lulus (108 tes, lint, typecheck, build; mesin PDF masih memberi peringatan ukuran). Tidak ada perubahan hosted.
+
+### Pemeriksaan hosted saat ini
+
+- `npm run check:supabase` pertama gagal karena koneksi sandbox; pengulangan dengan akses jaringan lulus: Auth terjangkau dan tabel yang tercantum dalam skrip menolak akses anonim, tanpa membaca baris data.
+- Security Advisor hosted tidak melaporkan temuan. Pemeriksaan ini terhadap skema yang sudah ada; tidak mencakup migration komunikasi yang masih lokal. Tidak memverifikasi email nyata, sesi akun sekolah, atau UAT.
