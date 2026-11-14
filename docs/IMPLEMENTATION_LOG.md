@@ -328,3 +328,8 @@ PRD 5.1 ditindaklanjuti: admin/kepala sekolah melihat jumlah siswa, guru dan kel
 
 npm run check Node24 lulus 101 tes, lint, tipe dan build. Sepuluh tes browser khusus ringkasan desktop/ponsel lulus, meliputi jumlah1205, nol, missing count, retry dan pembatasan permintaan peran. Tidak ada perubahan database atau pembacaan data pribadi. Commit eb1d4f8 sudah dipush; deployment produksi baru sedang diverifikasi. Dashboard PRD masih perlu progres supervisi, administrasi, aktivitas/notifikasi dan ringkasan spesifik guru/keluarga; jangan menganggap bagian5.1 selesai penuh.
 Deployment ringkasan dashboard terverifikasi READY; smoke produksi anonim lulus ulang. Tidak menguji akun admin nyata.
+
+
+## Optimasi font PDF ? 14 November 2026
+
+Build hanya menyertakan Roboto normal dan tebal untuk rekap akademik, tetap dimuat saat ekspor. Chunk font 855,16 ? 419,57 KB (gzip 465,45 ? 225,08 KB); mesin PDF masih 790,69 KB. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan desktop dan ponsel lulus dengan API tiruan. Varian italic perlu ditambahkan jika kelak digunakan. UAT sekolah belum dilakukan.
