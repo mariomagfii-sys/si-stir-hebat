@@ -12,7 +12,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
 | U3 | Audit responsif & aksesibilitas semua halaman | Cursor | DOING | ai/cursor-akses-status | Cursor |
 | U4 | Konsistensi empty/loading/error state | Cursor | DOING | ai/cursor-akses-status | Cursor |
-| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Copilot | REVIEW | ai/copilot-fix-browser-alerts | 180/180 browser pass; npm run check lulus. Selector spesifik sudah ada, tidak perlu diff tambahan. |
+| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Codex (mengambil alih) | BLOCKED | ai/codex-pdf-splitting | Run 180 skenario mencatat kegagalan; proses tidak selesai saat teardown. Perubahan tes yang sudah ada dipertahankan. |
 | T2 | Tambah tes unit untuk util/validator yang belum tercakup | Copilot | REVIEW | ai/copilot-fix-browser-alerts | 3 tes demo-auth baru; npm run check lulus (104 tes). |
 | T3 | Tes browser untuk Komunikasi & Dokumen (setelah UI REVIEW) | Copilot | TODO | | |
 | Q1 | Review keamanan RLS/grant semua migration (laporan, bukan perubahan) | Qoder | REVIEW | ai/qoder-review-qa | Laporan `docs/SECURITY_REVIEW.md`; tidak ada klaim aman. |
@@ -80,9 +80,9 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 ## Lanjutan
 
-- Aktif: T1; suite browser penuh masih berjalan; C4 siap ditinjau.
+- Aktif: T1 BLOCKED; lanjutkan diagnosis teardown Playwright dan jalankan ulang suite pada port/output terpisah, lalu C1. C4 siap ditinjau.
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
-- Verifikasi: `npm run check` pada Node 24 dan tes browser PDF; suite penuh T1 sedang berjalan dengan API tiruan.
+- Verifikasi: Node 24 `npm run check` lulus; jalankan `npm run test:browser` terpisah dan simpan log lengkap. Jangan menganggap proses yang dihentikan sebagai suite lulus.
 
 ### C4 ? Pengurangan font PDF
 
@@ -97,3 +97,15 @@ Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `
 1. Rute dan catatan proyek dibandingkan; daftar prioritas sementara ditambahkan ke status proyek.
 2. PRD/RBAC asli tidak tersedia, sehingga kesesuaian penuh dan kewenangan resmi tidak dapat diverifikasi.
 3. Berkas: `docs/PROJECT_STATUS.md`, `docs/AI_COORDINATION.md`; tidak ada perubahan kode atau tes pada telaah ini.
+
+### T1 ? Hasil sesi ini
+
+- Playwright menjalankan 180 skenario dengan API tiruan. Teramati gagal: impor XLSX desktop dan ekspor akademik PDF desktop. Hasil akhir agregat tidak tersedia: proses tertahan setelah seluruh nomor skenario tampil dan dihentikan.
+- Pengulangan terarah pada port terpisah menampilkan lulus untuk masing-masing skenario pada desktop dan ponsel, tetapi kedua proses juga tertahan saat penutupan dan dihentikan; ini bukan suite penuh yang lulus. Server Vite mengalami perubahan konfigurasi selama suite dan tes berjalan paralel, sehingga penyebab kegagalan belum dipastikan.
+- `tests/browser/app.spec.ts` sudah memiliki perubahan staged dan unstaged sebelum sesi; tidak diubah atau di-commit oleh Codex.
+
+### Log Sesi ? checkpoint 14 November 2026
+
+- C4 REVIEW: font PDF diperkecil dan `npm run check` lulus; C3 BLOCKED sebagian karena acuan hilang; T1 BLOCKED karena hasil suite dan teardown. Tugas lainnya belum dikerjakan dalam sesi ini.
+- Tidak membuat atau menerapkan migration; advisor dan `check:supabase` tidak dijalankan. Migration `20261114000139_student_habits` sebelumnya tercatat menunggu penerapan, belum diverifikasi ulang.
+- Branch `ai/codex-pdf-splitting`; tidak ada branch `main` lokal. Perubahan tes pengguna tetap staged dan unstaged. Tidak merge atau push. Auth/redirect, aktivasi admin, email dan UAT akun sekolah tetap memerlukan pemilik.
