@@ -6,7 +6,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 |----|-------|---------|--------|--------|---------|
 | C1 | Modul Komunikasi (pesan/pemberitahuan guru–wali): migration + RLS + API | Codex | TODO | | |
 | C2 | Modul Administrasi Dokumen (metadata dokumen, kategori, akses per peran) | Codex | TODO | | |
-| C3 | Telaah celah PRD vs fitur terpasang, urutkan prioritas | Codex | TODO | | |
+| C3 | Telaah celah PRD vs fitur terpasang, urutkan prioritas | Codex | BLOCKED | ai/codex-pdf-splitting | Daftar sementara tersedia; PRD dan RBAC asli tidak ditemukan. |
 | C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | REVIEW | ai/codex-pdf-splitting | Font 855,16 ? 419,57 KB; mesin tetap lazy dan 790,69 KB. |
 | U1 | UI modul Komunikasi (setelah C1 REVIEW) | Cursor | TODO | | |
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
@@ -91,3 +91,9 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 3. `npm run check` Node 24 lulus: lint, typecheck, 104 tes, build; unduhan PDF desktop dan ponsel masing-masing lulus dengan API tiruan.
 
 Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_LOG.md`.
+
+### C3 ? Telaah parsial
+
+1. Rute dan catatan proyek dibandingkan; daftar prioritas sementara ditambahkan ke status proyek.
+2. PRD/RBAC asli tidak tersedia, sehingga kesesuaian penuh dan kewenangan resmi tidak dapat diverifikasi.
+3. Berkas: `docs/PROJECT_STATUS.md`, `docs/AI_COORDINATION.md`; tidak ada perubahan kode atau tes pada telaah ini.

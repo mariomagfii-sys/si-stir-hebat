@@ -300,3 +300,17 @@ Validasi: `npm run check` lulus (lint, TypeScript, 101 tes unit/database, build)
 ## Optimasi font PDF ? 14 November 2026
 
 Build hanya menyertakan font Roboto normal dan tebal yang digunakan rekap akademik, tetap dimuat dinamis saat ekspor. Chunk font berkurang dari 855,16 KB menjadi 419,57 KB (gzip 465,45 ? 225,08 KB); mesin PDF 790,69 KB masih memicu peringatan. Jika laporan memakai italic, varian font perlu ditambahkan kembali. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan PDF desktop dan ponsel lulus dengan API tiruan. UAT akun sekolah belum dilakukan.
+
+## Daftar pekerjaan prioritas sementara ? 14 November 2026
+
+Ini daftar dari kode dan catatan proyek, bukan hasil pencocokan lengkap PRD: `docs/references/` dan dokumen PRD/RBAC asli tidak tersedia. Prioritas dan kewenangan harus ditinjau kembali setelah acuan tersedia.
+
+| Prioritas | Celah atau verifikasi | Bukti dan batas |
+| --- | --- | --- |
+| 1 | UAT per peran, Auth/redirect, email dan aktivasi admin | Panduan ada; akun sekolah dan pengaturan hosted belum diverifikasi. Aktivasi oleh pemilik. |
+| 2 | Komunikasi guru?wali dan administrasi dokumen | Tidak ada rute atau modul khusus pada `src/app/App.tsx`; kontrak pesan, penerima, akses dan persetujuan belum dikonfirmasi. |
+| 3 | Kebiasaan siswa | Ada folder fitur dan migration lokal, tetapi tidak ada rute UI; penerapan hosted belum terverifikasi pada sesi ini. |
+| 4 | Dashboard dan alur perkembangan/administrasi lain | Catatan proyek menyebut ringkasan khusus peran dan progres belum lengkap; diperlukan PRD untuk mengukur cakupan. |
+| 5 | Aturan nilai resmi dan zona waktu sekolah | Keputusan sementara dan tanggal Asia/Jakarta masih perlu dikonfirmasi; tidak menyimpulkan aturan rapor. |
+
+Telaah penuh C3 terblokir oleh ketiadaan dokumen acuan; daftar ini tidak menetapkan persyaratan resmi.
