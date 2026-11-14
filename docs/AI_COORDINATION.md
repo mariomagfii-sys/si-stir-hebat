@@ -4,7 +4,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 
 | ID | Tugas | Pemilik | Status | Branch | Catatan |
 |----|-------|---------|--------|--------|---------|
-| C1 | Modul Komunikasi (pesan/pemberitahuan guru–wali): migration + RLS + API | Codex | TODO | | |
+| C1 | Modul Komunikasi (pesan/pemberitahuan guru–wali): migration + RLS + API | Codex | REVIEW | ai/codex-pdf-splitting | Migration dan API lokal; hosted menunggu penanganan migration sebelumnya. |
 | C2 | Modul Administrasi Dokumen (metadata dokumen, kategori, akses per peran) | Codex | TODO | | |
 | C3 | Telaah celah PRD vs fitur terpasang, urutkan prioritas | Codex | BLOCKED | ai/codex-pdf-splitting | Daftar sementara tersedia; PRD dan RBAC asli tidak ditemukan. |
 | C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | REVIEW | ai/codex-pdf-splitting | Font 855,16 ke 419,57 KB; mesin tetap lazy dan 790,69 KB. |
@@ -80,9 +80,9 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 ## Lanjutan
 
-- Aktif: C1; T1 BLOCKED karena timeout lingkungan. Fondasi komunikasi lokal sedang dibuat; jangan terapkan sebelum tes, check dan pemeriksaan hosted. C4 siap ditinjau.
+- Aktif berikutnya: U1 atau C2; C1 REVIEW lokal dan belum diterapkan. T1 BLOCKED karena timeout lingkungan. Selaraskan urutan migration sebelum penerapan hosted.
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
-- Verifikasi: Node 24 `npm run check` terakhir lulus 104 tes sebelum perubahan paralel; suite browser 178 lulus dan 2 gagal, lihat `test-results-t1-external.log`. Ulangi pada lingkungan stabil sebelum menyatakan T1 selesai.
+- Verifikasi: Node 24 `npm run check` lulus 108 tes, lint, typecheck dan build; suite browser 178 lulus dan 2 gagal, lihat `test-results-t1-external.log`. Ulangi pada lingkungan stabil sebelum menyatakan T1 selesai.
 
 ### C4 - Pengurangan font PDF
 
@@ -120,3 +120,11 @@ Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `
 
 - Runtime alat terputus saat browser berjalan; setelah kembali, jam 15:32 WIB. C1/C2 dan UI belum dikerjakan, tidak ada migration baru atau perubahan hosted.
 - Workspace memperoleh dokumen audit dari sesi paralel; semuanya dipertahankan. Branch `ai/codex-pdf-splitting`, tidak ada merge. Pengaturan Auth/redirect, aktivasi admin dan UAT sekolah tetap tugas pemilik.
+
+### C1 - fondasi komunikasi lokal
+
+1. Pesan teks append-only dan pencarian penerima berhalaman dibatasi pada guru dengan penugasan aktif dan wali terverifikasi pada siswa/kelas aktif; pencabutan hubungan menutup akses. Admin, kepala sekolah, siswa, pending dan anonim ditolak.
+2. API bertipe dan tes PGlite/API tersedia; `npm run check` Node 24 lulus 108 tes, lint, typecheck dan build. Belum ada UI atau uji akun sekolah.
+3. Migration `20261114083827_komunikasi.sql` menunggu penerapan. Hosted memiliki 23 migration dan belum mencatat `20261114000139_student_habits`, yang lebih awal; tidak melewati celah urutan sebelum penanganan. Struktur referensi dan nama objek diperiksa tanpa membaca data pengguna. Advisor dan `check:supabase` sesudah penerapan belum dijalankan.
+
+Berkas: `supabase/migrations/20261114083827_komunikasi.sql`, `src/features/komunikasi/api/index.ts`, `tests/database.test.mjs`, `tests/communication.test.mjs`, `docs/DECISIONS.md`, `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_LOG.md`, `docs/AI_COORDINATION.md`.

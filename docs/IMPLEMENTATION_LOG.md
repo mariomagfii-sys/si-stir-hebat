@@ -333,3 +333,8 @@ Deployment ringkasan dashboard terverifikasi READY; smoke produksi anonim lulus 
 ## Optimasi font PDF - 14 November 2026
 
 Build hanya menyertakan Roboto normal dan tebal untuk rekap akademik, tetap dimuat saat ekspor. Chunk font 855,16 ke 419,57 KB (gzip 465,45 ke 225,08 KB); mesin PDF masih 790,69 KB. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan desktop dan ponsel lulus dengan API tiruan. Varian italic perlu ditambahkan jika kelak digunakan. UAT sekolah belum dilakukan.
+
+
+## Fondasi komunikasi lokal - 14 November 2026
+
+Migration 20261114083827 dan API pesan/penerima dibuat dengan RLS, penugasan dan relasi aktif, serta pesan append-only. Tes PGlite mencakup peran dan pencabutan; npm run check Node 24 lulus 108 tes, lint, tipe, build. Migration belum diterapkan: riwayat hosted belum mencatat student_habits yang lebih awal. UI, advisor dan UAT belum dilakukan.

@@ -314,3 +314,7 @@ Ini daftar dari kode dan catatan proyek, bukan hasil pencocokan lengkap PRD: `do
 | 5 | Aturan nilai resmi dan zona waktu sekolah | Keputusan sementara dan tanggal Asia/Jakarta masih perlu dikonfirmasi; tidak menyimpulkan aturan rapor. |
 
 Telaah penuh C3 terblokir oleh ketiadaan dokumen acuan; daftar ini tidak menetapkan persyaratan resmi.
+
+## Fondasi komunikasi lokal - 14 November 2026
+
+Migration `20261114083827_komunikasi` dan API bertipe membatasi pesan teks append-only ke guru dan wali dengan penugasan, keanggotaan, dan relasi aktif. Pencabutan akses diuji di PGlite; `npm run check` Node 24 lulus 108 tes, lint, tipe dan build. Migration belum diterapkan ke hosted; `student_habits` yang lebih awal juga belum tercatat di riwayat hosted. UI, verifikasi hosted, UAT serta aturan resmi retensi dan pengawasan masih terbuka.

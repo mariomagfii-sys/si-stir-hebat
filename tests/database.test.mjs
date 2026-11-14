@@ -929,6 +929,72 @@ test('migrations and database permissions', async t => {
     await as('teacher')
     assert.equal((await db.query('select * from public.teaching_journals')).rows.length,1)
   })
+  await t.test('communication restricts immutable messages to active teacher and verified guardian', async () => {
+    await as('administrator')
+    await db.query('select public.set_account_relationship($1,$2,$3,$4,$5)', ['parent',studentOne,ids.parent,true,'Data Contoh valid'])
+    const values = [attendanceAssignment, studentOne, ids.parent]
+    const send = () => db.query("insert into public.communication_messages (assignment_id,student_id,parent_profile_id,body) values ($1,$2,$3,'Data Contoh') returning author_id", values)
+    await as('teacher')
+    assert.ok((await db.query('select * from public.communication_recipients(0)')).rows.some(row => row.assignment_id === attendanceAssignment && row.student_id === studentOne && row.parent_profile_id === ids.parent))
+    await assert.rejects(db.query('select * from public.communication_recipients(-1)'), { code: '22023' })
+    assert.equal((await send()).rows[0].author_id, ids.teacher)
+    await as('parent')
+    assert.equal((await send()).rows[0].author_id, ids.parent)
+    assert.equal((await db.query('select * from public.communication_messages')).rows.length, 2)
+    await as('teacher')
+    await assert.rejects(db.query("insert into public.communication_messages (assignment_id,student_id,parent_profile_id,body) values ($1,$2,$3,'Data Contoh')", [attendanceAssignment,studentTwo,ids.parent]), permissionDenied)
+    await assert.rejects(db.query("insert into public.communication_messages (assignment_id,student_id,parent_profile_id,body,author_id) values ($1,$2,$3,'Data Contoh',$4)", [...values,ids.parent]), permissionDenied)
+    await as('parent')
+    await assert.rejects(db.query("update public.communication_messages set body='changed'"), permissionDenied)
+    await assert.rejects(db.query('delete from public.communication_messages'), permissionDenied)
+    for (const role of ['administrator','principal','student','pending','otherTeacher','anon']) {
+      await as(role)
+      if (role === 'anon') {
+        await assert.rejects(db.query('select * from public.communication_messages'), permissionDenied)
+        await assert.rejects(db.query('select * from public.communication_recipients(0)'), permissionDenied)
+      } else {
+        assert.equal((await db.query('select * from public.communication_messages')).rows.length, 0)
+        assert.equal((await db.query('select * from public.communication_recipients(0)')).rows.some(row => row.assignment_id === attendanceAssignment && row.student_id === studentOne && row.parent_profile_id === ids.parent), false)
+      }
+      await assert.rejects(send(), permissionDenied)
+    }
+    for (const [table, id] of [['teacher_assignments', attendanceAssignment], ['students', studentOne]]) {
+      await as('administrator')
+      await db.query(`update public.${table} set is_active=false where id=$1`, [id])
+      for (const role of ['teacher','parent']) {
+        await as(role)
+        assert.equal((await db.query('select * from public.communication_messages')).rows.length, 0)
+        await assert.rejects(send(), permissionDenied)
+      }
+      await as('administrator')
+      await db.query(`update public.${table} set is_active=true where id=$1`, [id])
+    }
+    await as('administrator')
+    const enrollment = (await db.query('select id from public.class_enrollments where student_id=$1 and class_id=$2 and is_active', [studentOne, attendanceClass])).rows[0].id
+    await db.query('update public.class_enrollments set is_active=false where id=$1', [enrollment])
+    for (const role of ['teacher','parent']) {
+      await as(role)
+      assert.equal((await db.query('select * from public.communication_messages')).rows.length, 0)
+      await assert.rejects(send(), permissionDenied)
+    }
+    await as('administrator')
+    await db.query('update public.class_enrollments set is_active=true where id=$1', [enrollment])
+    await db.exec('reset role')
+    await db.query("update public.profiles set role='pending' where id=$1", [ids.teacher])
+    await as('teacher')
+    assert.equal((await db.query('select * from public.communication_messages')).rows.length, 0)
+    await assert.rejects(send(), permissionDenied)
+    await db.exec('reset role')
+    await db.query("update public.profiles set role='teacher' where id=$1", [ids.teacher])
+    await as('administrator')
+    await db.query('select public.set_account_relationship($1,$2,$3,$4,$5)', ['parent',studentOne,ids.parent,false,'Data Contoh valid'])
+    for (const role of ['teacher','parent']) {
+      await as(role)
+      assert.equal((await db.query('select * from public.communication_messages')).rows.length, 0)
+      assert.equal((await db.query('select * from public.communication_recipients(0)')).rows.some(row => row.assignment_id === attendanceAssignment && row.student_id === studentOne && row.parent_profile_id === ids.parent), false)
+      await assert.rejects(send(), permissionDenied)
+    }
+  })
   await t.test('removing a school role immediately removes read access', async () => {
     await db.exec('reset role')
     await db.query("update public.profiles set role = 'pending' where id = $1", [ids.teacher])
