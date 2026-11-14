@@ -25,6 +25,13 @@ export async function daftarPesan(client: SupabaseClient, page = 0): Promise<Pes
   return data as PesanKomunikasi[]
 }
 
+// Check a client-generated message ID after a lost response before retrying.
+export async function cariPesan(client: SupabaseClient, id: string): Promise<PesanKomunikasi | null> {
+  const { data, error } = await client.from('communication_messages').select(columns).eq('id', id).maybeSingle()
+  if (error) throw error
+  return data as PesanKomunikasi | null
+}
+
 export async function kirimPesan(client: SupabaseClient, pesan: PesanBaru): Promise<PesanKomunikasi> {
   const body = pesan.body.trim()
   if (!body || Array.from(body).length > 4000) throw new Error('Isi pesan harus 1-4.000 karakter.')

@@ -82,7 +82,7 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 - Aktif berikutnya: U1 atau C2; C1 REVIEW lokal dan belum diterapkan. T1 BLOCKED karena timeout lingkungan. Selaraskan urutan migration sebelum penerapan hosted.
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
-- Verifikasi: Node 24 `npm run check` lulus 108 tes, lint, typecheck dan build; suite browser 178 lulus dan 2 gagal, lihat `test-results-t1-external.log`. Ulangi pada lingkungan stabil sebelum menyatakan T1 selesai.
+- Verifikasi: Node 24 `npm run check` terakhir lulus 109 tes, lint, typecheck dan build; suite browser 178 lulus dan 2 gagal, lihat `test-results-t1-external.log`. Ulangi pada lingkungan stabil sebelum menyatakan T1 selesai.
 
 ### C4 - Pengurangan font PDF
 
@@ -135,3 +135,5 @@ Berkas: `supabase/migrations/20261114083827_komunikasi.sql`, `src/features/komun
 
 - `npm run check:supabase` pertama gagal karena koneksi sandbox; pengulangan dengan akses jaringan lulus: Auth terjangkau dan tabel yang tercantum dalam skrip menolak akses anonim, tanpa membaca baris data.
 - Security Advisor hosted tidak melaporkan temuan. Pemeriksaan ini terhadap skema yang sudah ada; tidak mencakup migration komunikasi yang masih lokal. Tidak memverifikasi email nyata, sesi akun sekolah, atau UAT.
+
+- API komunikasi menyediakan pencarian pesan berdasarkan ID untuk menangani respons hilang. UI lanjutan harus mempertahankan ID dan isian, serta tidak menganggap hasil kosong sebagai bukti gagal kirim: akses bisa saja dicabut. Tes API dan `npm run check` terakhir lulus 109 tes.

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { kirimPesan, daftarPesan, daftarPenerima } from '../src/features/komunikasi/api/index.ts'
+import { kirimPesan, daftarPesan, daftarPenerima, cariPesan } from '../src/features/komunikasi/api/index.ts'
 
 test('communication API validates content and never sends author metadata', async () => {
   let payload
@@ -38,4 +38,20 @@ test('recipient API reports further authorized pages without returning the senti
   assert.equal(result.items.length, 25)
   assert.equal(result.hasMore, true)
   await assert.rejects(daftarPenerima(client, -1))
+})
+
+test('message lookup distinguishes an absent result from a failed request', async () => {
+  let error = null
+  let found = null
+  const query = { select: () => query, eq: (column, value) => {
+    assert.equal(column, 'id')
+    assert.equal(value, 'synthetic')
+    return query
+  }, maybeSingle: async () => ({ data: found, error }) }
+  const client = { from: () => query }
+  assert.equal(await cariPesan(client, 'synthetic'), null)
+  found = { id: 'synthetic' }
+  assert.equal((await cariPesan(client, 'synthetic')).id, 'synthetic')
+  error = new Error('network')
+  await assert.rejects(cariPesan(client, 'synthetic'), error)
 })
