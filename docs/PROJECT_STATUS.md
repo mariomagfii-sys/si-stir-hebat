@@ -296,3 +296,7 @@ Ringkasan ini belum menetapkan proses persetujuan, siklus pencatatan kebiasaan, 
 Dashboard menampilkan hitungan baca-saja supervisi berdasarkan tahap terakhir dan modul ajar berstatus diajukan/perlu revisi. Query memakai exact count HEAD terhadap tabel yang sudah ada, mengikuti RLS kepala sekolah, dan hanya berjalan untuk peran `principal`; draf pribadi guru tidak dihitung. Jika hitungan tidak tersedia, UI membedakannya dari nol, menjelaskan kegagalan, dan menyediakan retry. Ringkasan tidak mengambil nama, catatan supervisi, atau isi modul. Gaya kartu mengikuti palet ungu/lilac/biru/pink tanpa merombak halaman yang selesai.
 
 Validasi: `npm run check` lulus (lint, TypeScript, 101 tes unit/database, build); enam tes browser terfokus desktop/ponsel lulus untuk jumlah tahap/status, pembatasan peran, nol versus kegagalan, retry, dan overflow horizontal. Tidak ada migration atau perubahan hosted. Tahap backlog berikutnya, 7 Kebiasaan, masih menunggu keputusan pencatatan, frekuensi, validasi, dan visibilitas data.
+
+## Optimasi font PDF ? 14 November 2026
+
+Build hanya menyertakan font Roboto normal dan tebal yang digunakan rekap akademik, tetap dimuat dinamis saat ekspor. Chunk font berkurang dari 855,16 KB menjadi 419,57 KB (gzip 465,45 ? 225,08 KB); mesin PDF 790,69 KB masih memicu peringatan. Jika laporan memakai italic, varian font perlu ditambahkan kembali. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan PDF desktop dan ponsel lulus dengan API tiruan. UAT akun sekolah belum dilakukan.

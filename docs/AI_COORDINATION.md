@@ -7,7 +7,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 | C1 | Modul Komunikasi (pesan/pemberitahuan guru–wali): migration + RLS + API | Codex | TODO | | |
 | C2 | Modul Administrasi Dokumen (metadata dokumen, kategori, akses per peran) | Codex | TODO | | |
 | C3 | Telaah celah PRD vs fitur terpasang, urutkan prioritas | Codex | TODO | | |
-| C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | DOING | ai/codex-pdf-splitting | Mesin dan font sudah lazy; mengurangi varian font yang dibundel. |
+| C4 | Perkecil chunk PDF (dynamic import/code splitting) | Codex | REVIEW | ai/codex-pdf-splitting | Font 855,16 ? 419,57 KB; mesin tetap lazy dan 790,69 KB. |
 | U1 | UI modul Komunikasi (setelah C1 REVIEW) | Cursor | TODO | | |
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
 | U3 | Audit responsif & aksesibilitas semua halaman | Cursor | DOING | ai/cursor-akses-status | Cursor |
@@ -80,6 +80,14 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 ## Lanjutan
 
-- Aktif: C4; verifikasi font PDF normal/tebal, ukuran build dan tes unduhan browser.
-- Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`; perubahan tes browser milik sesi lain jangan ditimpa.
+- Aktif: T1; suite browser penuh masih berjalan; C4 siap ditinjau.
+- Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
 - Verifikasi: `npm run check` pada Node 24 dan tes browser PDF; suite penuh T1 sedang berjalan dengan API tiruan.
+
+### C4 ? Pengurangan font PDF
+
+1. Mesin dan font sebelumnya sudah diimpor dinamis; build kini hanya membundel Roboto normal dan tebal yang digunakan laporan.
+2. Chunk font 855,16 ? 419,57 KB (gzip 465,45 ? 225,08 KB); mesin 790,69 KB masih memberi peringatan Vite. Jika laporan kelak memakai italic, font tersebut harus ditambahkan kembali.
+3. `npm run check` Node 24 lulus: lint, typecheck, 104 tes, build; unduhan PDF desktop dan ponsel masing-masing lulus dengan API tiruan.
+
+Berkas: `vite.config.ts`, `docs/AI_COORDINATION.md`, `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_LOG.md`.
