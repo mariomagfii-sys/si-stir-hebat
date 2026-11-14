@@ -12,7 +12,7 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
 | U3 | Audit responsif & aksesibilitas semua halaman | Cursor | DOING | ai/cursor-akses-status | Cursor |
 | U4 | Konsistensi empty/loading/error state | Cursor | DOING | ai/cursor-akses-status | Cursor |
-| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Codex (mengambil alih) | BLOCKED | ai/codex-pdf-splitting | Run 180 skenario mencatat kegagalan; proses tidak selesai saat teardown. Perubahan tes yang sudah ada dipertahankan. |
+| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Codex (mengambil alih) | DOING | ai/codex-pdf-splitting | Mengulang suite terisolasi; perubahan tes yang sudah ada dipertahankan. |
 | T2 | Tambah tes unit untuk util/validator yang belum tercakup | Copilot | REVIEW | ai/copilot-fix-browser-alerts | 3 tes demo-auth baru; npm run check lulus (104 tes). |
 | T3 | Tes browser untuk Komunikasi & Dokumen (setelah UI REVIEW) | Copilot | TODO | | |
 | Q1 | Review keamanan RLS/grant semua migration (laporan, bukan perubahan) | Qoder | REVIEW | ai/qoder-review-qa | Laporan `docs/SECURITY_REVIEW.md`; tidak ada klaim aman. |
@@ -80,7 +80,7 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 ## Lanjutan
 
-- Aktif: T1 BLOCKED; lanjutkan diagnosis teardown Playwright dan jalankan ulang suite pada port/output terpisah, lalu C1. C4 siap ditinjau.
+- Aktif: T1; suite terisolasi berjalan pada port 5197 dan log test-results-t1.log; lanjutkan diagnosis teardown lalu C1. C4 siap ditinjau.
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
 - Verifikasi: Node 24 `npm run check` lulus; jalankan `npm run test:browser` terpisah dan simpan log lengkap. Jangan menganggap proses yang dihentikan sebagai suite lulus.
 
