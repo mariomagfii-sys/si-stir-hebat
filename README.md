@@ -10,7 +10,7 @@ Alur yang tersedia: autentikasi/profil, dashboard peran, pengumuman, data sekola
 
 Folder ini adalah root utama SI STIR HEBAT. Aplikasi utamanya tetap React/Vite; jangan membuat atau mengubah proyek di luar folder ini, dan jangan mengubah stack ke Next.js tanpa permintaan eksplisit. Instruksi kerja lengkap ada di [AGENTS.md](AGENTS.md). `D:\code\my-app` adalah contoh Next.js terpisah, bukan bagian dari aplikasi ini.
 
-Laporan rinci: [Status proyek](docs/PROJECT_STATUS.md), [Log implementasi](docs/IMPLEMENTATION_LOG.md), [Keputusan sementara](docs/DECISIONS.md), [Telaah keamanan migration](docs/SECURITY_REVIEW.md), dan [Panduan UAT](docs/PANDUAN_UAT.md). Folder `docs/references` (PRD, RBAC, blueprint) tidak tersedia di workspace ini; asumsi konservatif dicatat di dokumen keputusan. Skema nilai maksimum per asesmen dan publikasi manual guru merupakan keputusan sementara; skema resmi akan diberikan pengguna. Tidak ada perhitungan rapor otomatis.
+Laporan rinci: [Status proyek](docs/PROJECT_STATUS.md), [Log implementasi](docs/IMPLEMENTATION_LOG.md), [Keputusan sementara](docs/DECISIONS.md), [Telaah keamanan migration](docs/SECURITY_REVIEW.md), dan [Panduan UAT](docs/PANDUAN_UAT.md). Tujuh dokumen acuan tersedia sebagai Markdown di [`docs/references/`](docs/references/README.md), lengkap dengan hash dan hierarki otoritas; salinan tersebut belum disahkan sebagai acuan resmi. Skema nilai maksimum per asesmen dan publikasi manual guru merupakan keputusan sementara; skema resmi akan diberikan pengguna. Tidak ada perhitungan rapor otomatis.
 
 Koneksi Supabase sudah dikonfigurasi di workspace ini. Email login aktif. Dua puluh tiga migration terkonfirmasi diterapkan hingga 13 November 2026:
 
@@ -42,7 +42,7 @@ Koneksi Supabase sudah dikonfigurasi di workspace ini. Email login aktif. Dua pu
 
 RLS, izin dan trigger modul diverifikasi melalui metadata remote sebagaimana dicatat pada status proyek. Data API anonim diuji sesuai daftar tabel pada `scripts/check-supabase.mjs`, tanpa membaca baris data. Nama berkas migration yang tercatat mengikuti versi aktual remote. Jangan menerapkan ulang migration ini pada proyek tersebut. Tes lokal terbaru memakai Node 24; pengujian browser memakai API tiruan dan tidak menggantikan UAT akun sekolah.
 
-Berkas migration ke-24, `20261114000139_student_habits.sql`, hanya ada di repo lokal dan belum diterapkan ke hosted (tabelnya tidak ditemukan lewat Data API pada 14 November 2026). Jangan menerapkannya tanpa persetujuan pemilik. Telaah keamanan migration dan temuan yang masih terbuka ada di [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md).
+Ada 25 berkas migration di repo lokal. Dua berkas belum diterapkan ke hosted: `20261114000139_student_habits.sql` (ke-24; tabelnya tidak ditemukan lewat Data API pada 14 November 2026) dan `20261114083827_komunikasi.sql` (ke-25). Setelah persetujuan pemilik, terapkan berurutan dan jangan melompati `student_habits`. Telaah keamanan migration dan temuan yang masih terbuka ada di [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md).
 
 Akun administrator belum diaktifkan. Aplikasi sudah tersedia di https://si-stir-hebat-blue.vercel.app; Site URL/redirect Supabase Auth, login dengan akun sekolah, email pemulihan, dan UAT masih perlu diverifikasi oleh pemilik akun. Deployment ini tidak berarti aplikasi sudah siap operasional.
 
@@ -193,7 +193,7 @@ npx playwright install chromium
 
 Pada Windows, gunakan `$env:PLAYWRIGHT_CHANNEL='chromium'` untuk memilih Chromium yang dipasang Playwright. Pada CI Linux, browser dipasang otomatis. Pengujian browser tiruan tidak menggantikan pengujian email dan login Supabase sungguhan.
 
-Pemeriksaan 14 November 2026: `npm run check` lulus (lint, TypeScript, tes unit/database, build); jumlah tes dilaporkan Copilot 104 setelah T2. Build masih memperingatkan chunk PDF berukuran besar. Laporan Copilot untuk T1 menyebut suite browser penuh 180/180 lulus pada desktop dan ponsel setelah selector diperbaiki; Qoder tidak menjalankan ulang suite browser tersebut. `npm run check:supabase` pada 14 November 2026 mengonfirmasi Auth aktif dan penolakan akses anonim pada tabel yang diperiksa, tanpa membaca baris. Pengujian akun sekolah nyata belum dilakukan. Workflow GitHub Actions tersedia di `.github/workflows/verify.yml`; workflow belum diverifikasi pada GitHub.
+Baseline 15 November 2026: 109 tes unit/database; lint, TypeScript, dan build lulus pada run terakhir yang tercatat. Laporan Kilo menyebut 194 skenario browser lulus dengan API tiruan; angka 104 tes dan 180 skenario pada catatan lama adalah riwayat. Tugas dokumentasi ini tidak menjalankan ulang suite. Build masih memperingatkan chunk PDF berukuran besar. `npm run check:supabase` pada 14 November 2026 mengonfirmasi Auth aktif dan penolakan akses anonim pada tabel yang diperiksa, tanpa membaca baris. Pengujian akun sekolah nyata belum dilakukan. Workflow GitHub Actions tersedia di `.github/workflows/verify.yml`; workflow belum diverifikasi pada GitHub.
 
 ## Deployment
 

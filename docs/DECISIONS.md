@@ -1,8 +1,82 @@
-# Keputusan implementasi sementara
+# Keputusan implementasi dan keputusan pemilik
 
-Master prompt adalah sumber kebutuhan yang tersedia. Delapan dokumen rinci yang disebutkan belum ditemukan di workspace. Keputusan di bawah adalah asumsi teknis konservatif, bukan kutipan PRD atau matriks resmi.
+Dokumen ini mencatat keputusan pemilik dan asumsi teknis konservatif. Tujuh dokumen acuan telah disalin ke `docs/references/` pada 15 November 2026; lihat indeks dan hierarki otoritasnya di `docs/references/README.md`. Keputusan pemilik di bawah mengikat dan menggantikan bagian acuan yang bertentangan.
 
-- Tetap menggunakan stack serta struktur source yang sudah ada. Folder fitur dibuat saat ada implementasi nyata; tidak membuat halaman kosong untuk modul yang belum dibangun.
+## Keputusan pemilik — 15 November 2026
+
+### D1 — Migrasi bertahap ke Next.js
+
+Next.js disetujui eksplisit oleh pemilik untuk SI STIR HEBAT, dimigrasi bertahap setelah Codex/Cursor aktif. Sampai itu, kode tetap Vite. Supabase + RLS tetap menjadi otoritas akses; tidak ada service-role key di klien.
+
+- Persetujuan ini menggantikan larangan migrasi pada `AGENTS.md` dan pilihan stack pada PRD bagian 10.
+- Tidak ada migrasi kode, dependency, atau deployment yang dilakukan dalam tugas dokumentasi ini.
+- Rencana tahapan, kriteria selesai, dan pengalihan route harus disusun sebelum perubahan stack dimulai.
+- Aturan keras lain tetap berlaku: tidak ada service-role key atau secret di klien, repo, atau log; otorisasi tetap ditegakkan di PostgreSQL/RLS, bukan hanya UI.
+
+### D2 — Indikator ketuntasan tampilan
+
+KKM = 75. Persen = skor/maksimum x 100. >=75 Tuntas, <75 Belum tuntas. Hanya indikator tampilan. Tidak ada rapor otomatis/bobot/predikat. Nilai kosong bukan Belum tuntas. Ini menggantikan larangan ketuntasan pada keputusan skema sementara.
+
+- Nilai mentah, maksimum asesmen, publikasi manual, dan riwayat koreksi tetap seperti keputusan skema sementara.
+- Indikator tidak boleh mengubah nilai tersimpan, membuat peringkat, atau menjadi dasar keputusan akademik otomatis.
+- Nilai kosong, belum diisi, atau tidak dapat dihitung tidak boleh ditampilkan sebagai "Belum tuntas".
+- Penerapan UI dan tesnya belum dikerjakan dan memerlukan tugas terpisah.
+
+### D3 — PRD bagian 10 diperbarui
+
+Bagian 10 PRD (Next.js/Tailwind/Zod/monorepo) diperbarui oleh D1; Tailwind, Zod, dan monorepo tidak diwajibkan.
+
+- Ketentuan PRD lain tetap berlaku sejauh tidak bertentangan dengan aturan keras atau keputusan pemilik yang lebih baru.
+- Pemilihan pustaka tambahan tetap memerlukan keputusan tersendiri; D3 tidak memberi izin menambah dependency.
+
+### D4 — Retensi data anak
+
+Retensi data anak: **BELUM DIPUTUSKAN**.
+
+- Tidak ada penghapusan, anonymisasi, atau pembatasan retensi data yang boleh dibuat berdasarkan dokumen ini sampai pemilik mengisi keputusan.
+- Usulan dan batasan teknis tersedia di `docs/DRAFT_RETENSI_DATA_ANAK.md`; usulan tersebut bukan keputusan.
+- Perubahan schema, migration, job pembersihan, atau alur penghapusan akun harus menunggu keputusan pemilik dan persetujuan terpisah.
+
+### D5 — Mode demo hanya untuk pengembangan
+
+Mode demo hanya boleh aktif saat `import.meta.env.DEV` dan tidak ada konfigurasi Supabase yang valid.
+
+- Kredensial akun demo tidak boleh muncul di bundel produksi. Build produksi tanpa konfigurasi Supabase yang valid tetap harus gagal.
+- Implementasi acuan: `src/lib/demo-auth.ts` memakai `isDemoModeEnabled()`; data akun demo dipisah dan diganti modul kosong saat `vite build`.
+- Mencari akun demo di localStorage atau mengaktifkan demo karena `DEV` tidak terdefinisi tidak diizinkan.
+
+### D6 — Izin penerapan migration hosted
+
+Pemilik mengizinkan penerapan seluruh migration lokal, dengan syarat:
+
+- Backup dan verifikasi prasyarat dilakukan lebih dulu, serta konfirmasi akhir diminta tepat sebelum menerapkan.
+- Urutan wajib: `20261114000139_student_habits`, lalu `20261114083827_komunikasi`; jangan melewati migration yang lebih awal.
+- Jangan reset database hosted, jangan membaca atau mengubah data pribadi, dan laporkan bukti hasil setelah penerapan.
+- Izin ini tidak berlaku untuk deployment, push, atau perubahan Auth/redirect.
+
+## Opsi terbuka — draf umpan balik (K3), menunggu pemilik
+
+Temuan K3: administrator dan kepala sekolah dapat membaca draf umpan balik. Policy saat ini secara efektif menerapkan opsi (b). Dua opsi berikut belum diputuskan; **tidak ada perubahan policy, migration, atau kode dalam tugas ini**.
+
+### Opsi (a) — draf hanya terbaca penulis
+
+- Guru penulis dapat membaca dan mengubah drafnya sampai publikasi.
+- Administrator, kepala sekolah, siswa, dan wali tidak dapat membaca draf; mereka hanya dapat membaca umpan balik yang sudah terbit.
+- Konsekuensi: memerlukan perubahan policy SELECT dan tes peran; pengawasan staf atas draf tidak tersedia.
+- Pertanyaan pemilik: apakah kepala sekolah memerlukan akses draf untuk pembinaan sebelum publikasi?
+
+### Opsi (b) — admin/kepala sekolah boleh membaca draf
+
+- Guru penulis tetap pemilik draf; administrator dan kepala sekolah dapat membaca draf, tetapi tidak otomatis dapat mengubah atau menerbitkannya.
+- Siswa dan wali tetap hanya membaca umpan balik terbit.
+- Konsekuensi: sesuai perilaku saat ini; privasi draf lebih rendah dan harus dijelaskan dalam panduan peran.
+- Pertanyaan pemilik: apakah akses baca draf perlu dibatasi (misalnya hanya kepala sekolah, atau hanya setelah draf final)?
+
+Sampai pemilik memilih, jangan mengubah policy dan jangan menyatakan salah satu opsi sebagai kebijakan resmi.
+
+## Keputusan teknis sementara
+
+- Tetap menggunakan stack serta struktur source yang sudah ada sampai D1 dijalankan. Folder fitur dibuat saat ada implementasi nyata; tidak membuat halaman kosong untuk modul yang belum dibangun.
 - Data master awal berisi identitas sekolah, tahun ajaran, semester, mata pelajaran, dan kelas. Nama sekolah, alamat, NPSN, kalender, dan kelas tidak diisi otomatis sebagai data nyata.
 - Administrator mengelola data master administratif; peran sekolah yang sudah ditetapkan dapat membacanya. Kepala sekolah tidak diberi mutasi otomatis pada master data, dan administrator tidak memperoleh kewenangan persetujuan akademik.
 - Pengguna pending/anonim tidak memperoleh akses data master. Semua keputusan akses juga ditegakkan di PostgreSQL.
@@ -73,12 +147,37 @@ Master prompt adalah sumber kebutuhan yang tersedia. Delapan dokumen rinci yang 
 ## Skema asesmen sementara — keputusan pengguna, 12 November 2026
 
 - Pengguna menegaskan bahwa nilai maksimum per asesmen dan publikasi manual oleh guru sesuai penugasan adalah **skema sementara**. Pengguna akan memberikan skema resmi kemudian.
-- Tidak menghitung rapor otomatis, bobot antarasesmen, predikat, atau batas ketuntasan dari aturan yang belum diberikan. Persentase dalam rekap/grafik hanya nilai dibagi maksimum asesmen, bukan nilai rapor.
+- Tidak menghitung rapor otomatis, bobot antarasesmen, atau predikat dari aturan yang belum diberikan. Persentase dalam rekap/grafik hanya nilai dibagi maksimum asesmen, bukan nilai rapor.
+- **Digantikan sebagian oleh D2 (15 November 2026):** indikator tampilan boleh memakai KKM 75 dan label Tuntas/Belum tuntas. Larangan rapor otomatis, bobot, dan predikat tetap berlaku; nilai kosong tidak boleh dianggap Belum tuntas.
 - Simpan nilai mentah, maksimum tiap asesmen, jenis, publikasi dan riwayat koreksi. Ketika skema resmi diterima, rekonsiliasi aturan dan kebutuhan versi sebelum mengubah interpretasi hasil yang sudah terbit.
 
 
-13 November 2026: Pengelolaan usulan jadwal mengikuti PRD (admin mengatur jadwal utama; guru mengusulkan). Implementasi awal memakai perubahan seluruh rentang, satu pending per jadwal, keputusan admin dengan alasan, tanpa pemecahan periode otomatis atau penarikan oleh guru. Snapshot/revisi melindungi perubahan admin yang lebih baru. Skema penilaian sementara tetap tidak berubah.
+13 November 2026: Pengelolaan usulan jadwal mengikuti PRD (admin mengatur jadwal utama; guru mengusulkan). Implementasi awal memakai perubahan seluruh rentang, satu pending per jadwal, keputusan admin dengan alasan, tanpa pemecahan periode otomatis atau penarikan oleh guru. Snapshot/revisi melindungi perubahan admin yang lebih baru. Skema penilaian sementara tetap tidak berubah, kecuali indikator ketuntasan tampilan menurut D2.
 
 ## Komunikasi guru dan wali - rancangan sementara
 
 Sampai PRD dan RBAC asli tersedia, usulan paling terbatas adalah pesan teks antar guru yang memiliki penugasan aktif dan wali yang memiliki hubungan terverifikasi dengan siswa aktif pada kelas tersebut. Akses hilang ketika penugasan, keanggotaan, relasi, atau peran tidak lagi berlaku; siswa, pending, anonim, admin dan kepala sekolah tidak mendapat akses otomatis. Pesan bersifat append-only dengan penulis dan waktu server sebagai riwayat; tidak ada lampiran atau notifikasi eksternal. Ini bukan keputusan kebijakan resmi. Pertanyaan terbuka: retensi, kebutuhan akses pengawasan, penarikan pesan, pemberitahuan, dan masa berlaku komunikasi setelah hubungan berakhir.
+
+## ADR-001 — Stack terkunci (usulan, 15 November 2026)
+
+Status: **digantikan sebagian oleh D1–D3 (15 November 2026)**. Butir yang menyatakan Vite sebagai stack tetap dan menolak Next.js tidak lagi berlaku sebagai larangan; Vite tetap dipakai sampai migrasi bertahap D1 dimulai. Butir lain menjadi catatan keadaan saat ini, bukan larangan permanen. ADR ini tidak mengubah kode, dependency, atau hosted.
+
+Konteks: master prompt menetapkan stack terkunci React 19 + Vite + TypeScript + React Router + Supabase (Auth, Postgres, RLS, Storage) dengan deploy Vercel. PRD v1.0 bagian 10 menyebut Next.js, Tailwind, Zod, dan monorepo. D1 menyetujui Next.js secara bertahap; D3 menyatakan Tailwind, Zod, dan monorepo tidak diwajibkan.
+
+Keputusan yang diusulkan:
+
+1. Frontend React 19.1, Vite 6.3, TypeScript 5.8, dan React Router 7.8; CSS global tanpa Tailwind.
+2. Backend Supabase: Auth, Postgres, RLS, dan Storage; klien mengakses data langsung dengan otorisasi RLS. Saat ini tidak memakai Next.js atau Express; D1 mengizinkan migrasi bertahap ke Next.js.
+3. Satu aplikasi Vite di `SI_STIR_HEBAT_Starter/si-stir-hebat` sampai migrasi D1 dimulai; bukan monorepo.
+4. Deploy sebagai SPA di Vercel.
+5. Validasi di constraint database, grant kolom, trigger, dan RPC. Zod tidak ditambahkan tanpa keputusan pemilik.
+6. Runtime Node 24.x sesuai `package.json` `engines`.
+7. Bagian 10 PRD diperbarui oleh D1/D3; bagian PRD lain tetap berlaku sejauh tidak bertentangan dengan aturan keras.
+
+Konsekuensi:
+
+- Dokumen acuan harus direkonsiliasi dengan keputusan ini; migrasi stack bukan wewenang agen.
+- Perubahan arsitektur, dependency, atau struktur repo memerlukan ADR baru dan persetujuan pemilik.
+- ADR ini belum memutuskan identitas login (email atau NISN/NIP), pemulihan sandi, peran operator teknis, retensi data, atau kebijakan backup.
+
+Bukti: `package.json`, `vite.config.ts`, `vercel.json`, `docs/AUDIT_KESESUAIAN_ACUAN.md` bagian 4, dan master prompt bagian 1.

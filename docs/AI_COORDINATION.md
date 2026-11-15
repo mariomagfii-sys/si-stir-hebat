@@ -1,5 +1,12 @@
 # Papan Koordinasi AI
 
+## Baseline angka - 15 November 2026
+
+- 109 tes unit/database; lint, typecheck, dan build lulus pada run terakhir yang tercatat.
+- 194 skenario browser menurut laporan Kilo, memakai API tiruan; bukan UAT akun sekolah dan tidak dijalankan ulang pada tugas dokumentasi ini.
+- 25 migration lokal; 23 hosted. `20261114000139_student_habits` dan `20261114083827_komunikasi` belum hosted; terapkan berurutan setelah persetujuan.
+- Angka pada ringkasan bertanggal di bawah adalah riwayat run saat itu. Jangan memakai angka lama untuk klaim baru.
+
 Status: TODO | DOING | REVIEW | DONE | BLOCKED
 
 | ID | Tugas | Pemilik | Status | Branch | Catatan |
@@ -12,13 +19,14 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 | U2 | UI modul Administrasi Dokumen (setelah C2 REVIEW) | Cursor | TODO | | |
 | U3 | Audit responsif & aksesibilitas semua halaman | Cursor | DOING | ai/cursor-akses-status | Cursor |
 | U4 | Konsistensi empty/loading/error state | Cursor | DOING | ai/cursor-akses-status | Cursor |
-| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Codex (mengambil alih) | BLOCKED | ai/codex-pdf-splitting | Suite 178 lulus, 2 timeout; pengulangan 1 lulus dan 1 timeout. |
-| T2 | Tambah tes unit untuk util/validator yang belum tercakup | Copilot | REVIEW | ai/copilot-fix-browser-alerts | 3 tes demo-auth baru; npm run check lulus (104 tes). |
+| T1 | Perbaiki 2 tes browser dengan selector alert ambigu, jalankan ulang penuh | Kilo | REVIEW | kilo/t1-stabilkan-tes-browser | Kilo melaporkan 194 skenario lulus (desktop+ponsel, API tiruan); log run penuh belum diverifikasi ulang pada sesi ini. |
+| T2 | Tambah tes unit untuk util/validator yang belum tercakup | Copilot | REVIEW | ai/copilot-fix-browser-alerts | 3 tes demo-auth baru; npm run check lulus (104 tes saat itu; baseline sekarang 109). |
 | T3 | Tes browser untuk Komunikasi & Dokumen (setelah UI REVIEW) | Copilot | TODO | | |
 | Q1 | Review keamanan RLS/grant semua migration (laporan, bukan perubahan) | Qoder | REVIEW | ai/qoder-review-qa | Laporan `docs/SECURITY_REVIEW.md`; tidak ada klaim aman. |
 | Q2 | Rapikan README (kritis: hapus info usang/duplikat jumlah migration) | Qoder | REVIEW | ai/qoder-review-qa | README dirapikan; tautan laporan keamanan dan UAT. |
 | Q3 | Panduan UAT per peran (admin, kepala sekolah, guru, siswa, wali) | Qoder | REVIEW | ai/qoder-review-qa | `docs/PANDUAN_UAT.md`; belum dijalankan akun nyata. |
 | Q4 | Review PR dari AI lain sebelum merge | Qoder | REVIEW | ai/qoder-review-qa | Review T1/T2 tertulis; branch hilang setelah git diinisialisasi ulang. |
+| Q10 | Sinkronisasi dokumen: D1-D4, indeks acuan, baseline angka, draf RBAC | Qoder | REVIEW | ai/qoder-docs-sync | D1-D4 dan opsi K3 di `docs/DECISIONS.md`; tujuh acuan disalin; `docs/RBAC_RESMI_DRAFT.md` menunggu pengesahan. |
 
 ## Permintaan Lintas AI
 (tulis di sini: dari → ke, apa yang dibutuhkan)
@@ -26,16 +34,16 @@ Status: TODO | DOING | REVIEW | DONE | BLOCKED
 - Qoder → Codex: repo Git diinisialisasi ulang pada 14 November 2026 09:41 (hanya commit awal `a6a4d5b`). Branch `ai/copilot-fix-browser-alerts` dan branch Qoder sebelumnya hilang sehingga review diff T1/T2 tidak mungkin. Mohon tetapkan satu alur branch dan jangan inisialisasi ulang repo.
 - Qoder → Codex: tindak lanjuti temuan `docs/SECURITY_REVIEW.md` — K1 (`todos`), K2 (`student_habits` belum diterapkan), K3 (draf umpan balik), K4 (RLS Storage hosted).
 - Qoder → Codex/Cursor: putuskan pembatasan mode demo. Saat ini konfigurasi Supabase tidak valid membuat aplikasi menampilkan akun sintetis dan data contoh (`src/lib/demo-auth.ts`, `src/app/Account.tsx:38`); build produksi salah konfigurasi bisa tampak seperti aplikasi sekolah.
-- Qoder → Copilot: lampirkan log/artefak run browser penuh untuk T1. `npx playwright test --list` mengonfirmasi 180 tes, tetapi run tidak terbukti dari repo. Angka tes di ringkasan T1 (101) sudah usang; run Qoder menunjukkan 104.
-- Qoder → Codex: README kini menyatakan 23 migration hosted dan berkas ke-24 (`student_habits`) hanya lokal serta belum diterapkan; konfirmasi sebelum penerapan.
+- Qoder → Copilot/Kilo: lampirkan log/artefak run browser penuh untuk T1. Baseline yang diselaraskan adalah 194 skenario (laporan Kilo); angka 180/104 pada catatan lama adalah riwayat dan tidak dipakai untuk klaim baru.
+- Qoder → Codex: README menyatakan 23 migration hosted; dua berkas lokal belum hosted: `student_habits` (24) dan `komunikasi` (25). Terapkan berurutan setelah persetujuan; jangan melompati `student_habits`.
 
 ## Urutan merge
 Codex (backend) → Cursor (UI) → Copilot (tes) → Qoder (docs). Hanya Codex yang merge ke main.
 
-### T1 — Verifikasi selector alert
+### T1 - Verifikasi selector alert (riwayat)
 
 1. Suite Playwright penuh: 180/180 lulus pada desktop dan ponsel; tidak ada kegagalan selector.
-2. `npm run check`: lint, typecheck, 101/101 tes unit/database, dan build lulus.
+2. `npm run check` saat itu: lint, typecheck, 101/101 tes unit/database, dan build lulus; baseline sekarang 109.
 3. Selector dashboard yang sebelumnya ambigu sudah menggunakan pencocokan nama exact; tidak perlu mengubah perilaku atau menambah diff tes.
 
 File ditinjau: `tests/browser/app.spec.ts` (tidak diubah pada tugas T1 ini).
@@ -50,13 +58,13 @@ File: `tests/demo-auth.test.mjs`.
 
 ### Ringkasan Q1 — Telaah keamanan migration
 
-1. Diperiksa 24 berkas migration: tidak ada grant ke `anon`/`public`, 39/39 fungsi SECURITY DEFINER memakai `search_path`, 35/35 tabel ber-RLS; grant kolom mencegah perubahan peran/`profile_id`.
+1. Diperiksa 24 berkas migration (saat itu; kini 25 berkas lokal): tidak ada grant ke `anon`/`public`, 39/39 fungsi SECURITY DEFINER memakai `search_path`, 35/35 tabel ber-RLS; grant kolom mencegah perubahan peran/`profile_id`.
 2. Temuan perlu tindakan: `todos` tanpa transaksi + DML penuh (K1), draf umpan balik terbaca admin/kepala sekolah (K3), `habit_students()` dan status hosted migration ke-24 (K2), bukti RLS Storage terbatas (K4). Laporan tidak menyatakan database "aman".
 3. File: `docs/SECURITY_REVIEW.md`, `docs/AI_COORDINATION.md`; `npm run check:supabase` dijalankan (anon ditolak, tanpa membaca baris data).
 
 ### Ringkasan Q2 — README
 
-1. Jumlah migration kini satu sumber: 23 hosted pada tabel; berkas ke-24 (`student_habits`) dinyatakan hanya lokal dan belum diterapkan (dibuktikan 404 Data API). Klaim advisor lama diganti tautan bukti telaah.
+1. Jumlah migration kini satu sumber: 23 hosted; dua berkas lokal belum diterapkan, yaitu `student_habits` (24) dan `komunikasi` (25). Klaim advisor lama diganti tautan bukti telaah.
 2. Kontradiksi versi Node diperbaiki menjadi 24.x sesuai `engines`; mode demo lokal dijelaskan jujur saat konfigurasi tidak valid; batasan (belum UAT, admin belum aktif, belum siap operasional) dipertahankan.
 3. File: `README.md`, `docs/AI_COORDINATION.md`; `npm run check` dijalankan ulang: 104/104 tes, lint, typecheck, build lulus (peringatan chunk PDF tetap).
 
@@ -80,9 +88,9 @@ Catatan proses: repo Git diinisialisasi ulang (hanya commit awal `a6a4d5b`), seh
 
 ## Lanjutan
 
-- Aktif berikutnya: U1 atau C2; C1 REVIEW lokal dan belum diterapkan. T1 BLOCKED karena timeout lingkungan. Selaraskan urutan migration sebelum penerapan hosted.
+- Aktif berikutnya: U1 atau C2; C1 REVIEW lokal dan belum diterapkan. T1 REVIEW: Kilo melaporkan 194 skenario lulus, tetapi log run penuh belum diverifikasi. Selaraskan urutan migration sebelum penerapan hosted.
 - Berkas: `tests/browser/app.spec.ts` memiliki perubahan bertahap dan belum bertahap yang sudah ada; jangan ditimpa atau disertakan dalam commit C4.
-- Verifikasi: Node 24 `npm run check` terakhir lulus 109 tes, lint, typecheck dan build; suite browser 178 lulus dan 2 gagal, lihat `test-results-t1-external.log`. Ulangi pada lingkungan stabil sebelum menyatakan T1 selesai.
+- Verifikasi: Node 24 `npm run check` terakhir lulus 109 tes, lint, typecheck dan build. Baseline browser adalah 194 skenario menurut laporan Kilo; angka 178 lulus/2 gagal adalah riwayat run lama. T1 berstatus REVIEW sampai log run penuh diperiksa.
 
 ### C4 - Pengurangan font PDF
 
@@ -144,3 +152,42 @@ Berkas: `supabase/migrations/20261114083827_komunikasi.sql`, `src/features/komun
 - Migration baru `20261114083827_komunikasi` belum diterapkan; `20261114000139_student_habits` yang lebih awal juga belum tercatat hosted. Metadata hosted dicek tanpa membaca baris data. Advisor skema hosted saat ini kosong; `check:supabase` lulus setelah akses jaringan tersedia, tanpa mencakup komunikasi.
 - Pemeriksaan terakhir `npm run check` Node 24 lulus 109 tes, lint, typecheck dan build; peringatan mesin PDF masih ada. Browser memakai API tiruan dan tidak lulus penuh. Auth/redirect, aktivasi admin, email dan UAT akun sekolah tetap perlu pemilik.
 - Branch `ai/codex-pdf-splitting`, belum di-merge karena `main` lokal tidak ada. File browser staged serta dokumen audit dan log sesi lain dipertahankan. Lanjutan: susun UI U1, termasuk pemulihan respons hilang, lalu C2; selaraskan urutan migration sebelum penerapan.
+
+### Ringkasan Q10 - Sinkronisasi dokumen (15 November 2026)
+
+1. D1-D4 dan opsi K3 dicatat di `docs/DECISIONS.md`; ADR-001 ditandai digantikan sebagian. D4 retensi data anak tetap **BELUM DIPUTUSKAN**.
+2. Tujuh acuan disalin ke `docs/references/` dengan hash dan hierarki otoritas; `docs/RBAC_RESMI_DRAFT.md` memuat matriks role x modul serta PD-01 sampai PD-08 untuk disahkan.
+3. Baseline 109 tes, 194 skenario, 25 migration lokal, dan 23 hosted diselaraskan di `AGENTS.md`, `docs/PROJECT_STATUS.md`, dan papan ini. Tidak ada perubahan `src/`, `tests/`, `supabase/`, hosted, merge, atau push.
+
+## Tugas Kilo (QA/CI/Ops) — dilampirkan terpisah
+
+Baris Q5–Q9/L07/L08/L13 sempat hilang saat berkas ini ditimpa dari salinan lama (lihat catatan Qoder). Karena itu tugas Kilo dicatat di bagian ini, bukan disisipkan ke tabel utama, agar tidak menimpa pekerjaan agen lain.
+
+| ID | Tugas | Status | Branch | Bukti |
+| --- | --- | --- | --- | --- |
+| Q5 | Checklist UAT siap isi per peran | DONE | ai/kilo/l14-suite | `docs/UAT_CHECKLIST.md` (belum dijalankan akun nyata) |
+| Q6 | Tes penolakan lintas peran `/tautan-akun`, `/supervisi` | DONE | ai/kilo/l14-suite | 7 skenario, desktop + ponsel |
+| Q7 | Cakupan materi terbit dan pembuatan tugas | DONE | ai/kilo/l14-suite | 2 skenario |
+| Q8 | Cakupan modul ajar (simpan draf, ajukan) | DONE | ai/kilo/l14-suite | 2 skenario |
+| Q9 | Matriks cakupan uji | DONE | ai/kilo/l14-suite | `docs/QA_COVERAGE.md`; run lebih baru mencatat 202/202 (`docs/qa-logs/`); baseline yang diselaraskan di papan ini 194. |
+| L08 | Gerbang urutan migration + validasi workflow, template PR | REVIEW | ai/kilo/l14-suite | `scripts/check-migrations.mjs`, `scripts/check-ci.mjs`; run GitHub belum terverifikasi |
+| L07 | Runbook operasional: smoke, rollback, checklist Auth | REVIEW | ai/kilo/l14-suite | `scripts/smoke-production.mjs`, `docs/RUNBOOK_OPERASIONAL.md` |
+| L11 | Ukur bundel + usulan header cache | REVIEW | ai/kilo/l14-suite | `docs/L11_BUNDEL_CACHE.md`; header belum diterapkan |
+| L13 | Monitoring dasar (smoke, advisor, kuota) | REVIEW | ai/kilo/l14-suite | Tabel monitoring pada runbook; alert belum terpasang |
+
+## Keputusan Pemilik — 15 November 2026
+
+Berlaku untuk Copilot, Sixth, Codex, dan Qoder. Ini izin/kebijakan pemilik, bukan klaim bahwa pekerjaan sudah selesai.
+
+1. **Mode demo:** hanya untuk `import.meta.env.DEV`; kredensial akun demo tidak boleh ada di bundel produksi. Build produksi tanpa konfigurasi Supabase tetap harus gagal. Implementasi acuan: branch `ai/qoder-demo-gate` commit `e59ed65` (gate `isDemoModeEnabled()`, modul akun demo diganti kosong saat build, panel login digate). Copilot wajib memakai gate yang sama dan tidak boleh memakai pola `env.DEV === undefined` yang mengaktifkan demo di produksi.
+2. **Branch QA pengganti Kilo:** `agent/sixth/qa-hardening` dibuat dari `20f5f22`; commit QA Kilo dipindahkan ke branch ini. Hasil terakhir: 202/202 browser lulus dari cache Vite kosong (Node v24.22.3, port 5199), 109/109 unit/database, log `docs/qa-logs/test-browser-2026-11-15-202-node24-port5199.log`. Jangan memakai hitungan lama 180/194/200 untuk klaim baru.
+3. **Migration hosted:** pemilik **mengizinkan penerapan semua migration lokal**, tetapi hanya setelah backup dan verifikasi prasyarat, dengan konfirmasi akhir tepat sebelum menerapkan. Urutan wajib: `20261114000139_student_habits` lalu `20261114083827_komunikasi`. Jangan reset DB hosted, jangan lewati migration sebelumnya, dan jangan membaca/mengubah data pribadi.
+4. **D4 retensi data anak:** tetap **BELUM DIPUTUSKAN**. Tidak ada penghapusan/anonymisasi/job retensi sampai keputusan pemilik.
+5. **Notifikasi:** keputusan ini dicatat di papan ini. Kanal chat/team belum dapat dikirimi karena perangkat hanya memiliki `agent:default` dan tidak ada team; pemilik perlu menamai sesi/team jika ingin notifikasi chat terpisah.
+
+### Permintaan Lintas AI — tindak lanjut
+
+- Owner → Copilot: terapkan kebijakan mode demo DEV-only pada branch Copilot; jangan menampilkan panel demo di produksi dan jangan mengandalkan `env.DEV` yang tidak terdefinisi sebagai nilai benar.
+- Owner → Sixth: lanjutkan QA di `agent/sixth/qa-hardening`; pertahankan log dengan tanggal, Node 24, port, dan jumlah skenario yang sama dengan `npx playwright test --list`.
+- Owner → Codex: migration hosted diizinkan hanya lewat backup + verifikasi + konfirmasi akhir; jangan reset dan jangan melompati urutan.
+- Owner → Qoder: sinkronkan dokumen ke keputusan ini; D4 tetap terbuka; jangan mengklaim UAT atau produksi siap.

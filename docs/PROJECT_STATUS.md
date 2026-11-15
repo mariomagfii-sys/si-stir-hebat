@@ -1,3 +1,24 @@
+# Status SI STIR HEBAT
+
+Pembaruan terakhir: 15 November 2026. Workspace: `D:/code/SI_STIR_HEBAT_Starter/si-stir-hebat`.
+
+Status ringkas (baseline 15 November 2026):
+
+- **Tes:** 109 tes unit/database; lint, typecheck, dan build lulus pada run terakhir yang tercatat.
+- **Browser:** 194 skenario menurut laporan Kilo, memakai API tiruan. Ini bukan UAT akun sekolah dan tidak dijalankan ulang untuk tugas dokumentasi ini. Run 202/202 yang lebih baru dicatat terpisah di papan/`docs/qa-logs/` dan belum menggantikan baseline ini.
+- **Migration:** 25 berkas lokal; 23 tercatat hosted. `20261114000139_student_habits` dan `20261114083827_komunikasi` belum hosted; setelah disetujui, terapkan berurutan dan jangan melompati yang lebih awal.
+- **Keputusan:** D1–D4 tercatat di `docs/DECISIONS.md`. D4 retensi data anak masih **BELUM DIPUTUSKAN**. Matriks RBAC resmi masih draf di `docs/RBAC_RESMI_DRAFT.md`.
+- **Belum terverifikasi:** UAT akun sekolah, email/pemulihan nyata, CI hosted, restore backup, dan kesiapan operasional. Jangan menyatakan “aman” atau “siap operasional” tanpa bukti baru.
+
+Catatan: entri bertanggal di bawah adalah riwayat. Angka pada entri lama adalah angka run saat itu; angka tersebut tidak otomatis menggantikan baseline di atas.
+
+## Perbaikan demo forgot-password — 15 November 2026
+
+Perbaikan keamanan dan UX pada mode demo: pencarian profil untuk reset kata sandi kini memakai email, bukan `userId` kosong, sehingga validasi akun demo bekerja secara case-insensitive untuk alamat seperti `ADMIN@SDN03.SCH.ID`. Fungsi baru `getDemoProfileByEmail()` dipakai di form lupa kata sandi, dan pengujian regresi ditambahkan untuk validasi email serta perubahan profil/password di mode demo. Validasi: `npm run typecheck` dan `node --test tests/demo-auth.test.mjs` lulus.
+
+## UI komunikasi guru-wali — 15 November 2026
+
+Peta rute baru menambahkan halaman `/komunikasi` untuk guru dan orang tua. Guru dapat memilih wali/murid yang masih aktif dan mengirim pesan teks; wali dapat membaca pesan yang masuk untuk murid terverifikasi. Konten mengikuti kontrak API lokal: pesan append-only, tunggal dan dibatasi 1-4.000 karakter, serta hanya menampilkan relasi yang masih aktif. Validasi: `npm run check` lulus (lint, TypeScript, 109 tes, build). UI belum menggantikan UAT akun sekolah nyata atau penerapan hosted.
 
 ## Persiapan rilis operasional — 13 November 2026
 
@@ -28,9 +49,6 @@ Guru dapat mengusulkan perubahan hari, jam, dan periode jadwal aktif miliknya me
 Penerapan keputusan dan perubahan jadwal dilakukan dalam satu transaksi melalui pemeriksaan bentrok yang sama dengan penyuntingan admin. Revisi usang, jadwal nonaktif, atau penugasan pengusul yang dicabut menggagalkan persetujuan. Usulan usang masih dapat ditolak, lalu guru mengajukan ulang. Keputusan terminal tidak dapat diedit langsung. Kebijakan tahap ini: perubahan mengganti seluruh rentang jadwal, bukan memecahnya menjadi periode lama/baru; dijelaskan dalam UI. Penarikan usulan oleh guru belum tersedia.
 
 Migration `20261113061010_schedule_proposals` diterapkan; total 22 migration. Metadata RLS, larangan INSERT/UPDATE langsung, serta larangan RPC anonim terverifikasi; Security Advisor kosong. Pemeriksaan tidak membaca data pribadi. `npm run check` Node 24 lulus dengan 101 tes, lint, tipe dan build. Tes database mencakup batas peran, duplikasi, konflik dengan rollback, revisi usang, pencabutan penugasan dan keputusan tunggal. Delapan tes browser jadwal desktop/ponsel lulus dengan API tiruan, ditambah dua regresi supervisi. Kegagalan awal pemilih label tes diperbaiki menggunakan combobox berdasarkan accessible name; tidak memerlukan perubahan UI. Peringatan ukuran chunk PDF tetap ada. UAT akun sekolah dan uji konkurensi multikoneksi belum dilakukan.
-# Status SI STIR HEBAT
-
-Pembaruan terakhir: 12 November 2026. Workspace: `D:/code/SI_STIR_HEBAT_Starter/si-stir-hebat`. Bagian audit fondasi merekam pemeriksaan awal 10 November; ringkasan berikut merupakan perkembangan terbaru.
 
 ## Rekap dan perkembangan akademik — 12 November 2026
 
@@ -266,7 +284,7 @@ Tanggal sekolah masih memakai Asia/Jakarta pada frontend dan migration. Konfirma
 14 November 2026: Repo https://github.com/mariomagfii-sys/si-stir-hebat berhasil di-clone ke D:/code/SI_STIR_HEBAT_Starter/github-release. Paket rilis 108 berkas diunggah ke main, commit 86fe0e79224d4d607afdd30cfeb633a24b8a5fa9; git ls-remote cocok dengan HEAD lokal. Tidak menyertakan .env.local, .env, .vercel atau lampiran pribadi. CI GitHub belum diverifikasi (konektor memberi 404; Git CLI berhasil). Deployment Vercel dan aktivasi admin tetap belum selesai.
 14 November 2026: Login Vercel berhasil melalui device authorization; proyek si-stir-hebat dibuat dan deployment CLI produksi READY (dpl_DHXi8ktz5chWQQji1wTJQdrLMjEk). URL publik https://si-stir-hebat-blue.vercel.app. Empat route HTTP 200; browser headless mobile memverifikasi login nyata (bukan demo), redirect /jadwal tanpa sesi, tidak meluber dan tidak ada pageerror. Hanya akses anonim, tidak membaca data pribadi. Node24 diselaraskan package/lock (push b07638d). Panduan produksi/aktivasi diunggah commit36f8c53. GitHub auto-deploy belum terhubung karena Vercel meminta GitHub Login Connection. Site URL/redirect Auth, aktivasi admin, login/email nyata dan UAT tetap belum terverifikasi. Tujuan PRD penuh belum selesai.
 
-## Ringkasan sekolah dashboard � 14 November 2026
+## Ringkasan sekolah dashboard — 14 November 2026
 
 PRD 5.1 ditindaklanjuti: admin/kepala sekolah melihat jumlah siswa, guru dan kelas berstatus aktif. Query HEAD dengan exact count, bukan mengunduh baris atau menghitung halaman; RLS tabel tetap berlaku. Label menjelaskan kelas mencakup seluruh tahun ajaran dan siswa berasal dari registri, bukan enrollment. Nol, belum dimuat dan gagal dibedakan. Partial failure mempertahankan jumlah yang berhasil; retry tersedia. Tidak ada query ringkasan pada guru/siswa/wali/pending. Tautan menuju data master terkait tersedia.
 
