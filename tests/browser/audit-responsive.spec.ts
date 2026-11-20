@@ -21,6 +21,13 @@ async function boot(page: Page, role = 'administrator') {
     if (url.pathname.endsWith('/logout')) return route.fulfill({ status: 204 })
     if (url.pathname.endsWith('/user')) return json({ user })
     if (url.pathname.endsWith('/profiles')) return json([{ id: userId, full_name: 'Pengguna Uji', role }])
+    if (url.pathname.endsWith('/rpc/dashboard_overview')) return json({
+      profile: { full_name: 'Pengguna Uji', role: 'administrator' },
+      active: { students: 0, teachers: 0, classes: 0 },
+      supervision_stages: { '1': 0, '2': 0, '3': 0, '4': 0 },
+      teaching_modules: { submitted: 0, returned: 0 },
+      announcements: { published_count: 0, draft_count: 0, recent: [] },
+    })
     if (request.method() === 'HEAD') return route.fulfill({ status: 200, headers: { 'content-range': '0-0/0' } })
     return json([])
   })

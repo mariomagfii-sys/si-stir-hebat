@@ -62,6 +62,21 @@ async function mockSchool(page: Page, { role = 'administrator', signedIn = true,
       if (method === 'PATCH') { profile = { ...profile, ...request.postDataJSON() }; return json(profile) }
       return json([profile])
     }
+    if (url.pathname.endsWith('/rpc/dashboard_overview')) {
+      if (failNews) return json({ message: 'Unavailable' }, 503)
+      const published = news.filter(item => item.status === 'published')
+      return json({
+        profile: { full_name: profile.full_name, role: role === 'principal' ? 'principal' : 'administrator' },
+        active: { students: 2, teachers: 2, classes: 1 },
+        supervision_stages: { '1': 2, '2': 1, '3': 0, '4': 3 },
+        teaching_modules: { submitted: 4, returned: 1 },
+        announcements: {
+          published_count: published.length,
+          draft_count: news.filter(item => item.status === 'draft').length,
+          recent: published.slice(0, 3).map(item => ({ id: item.id, title: item.title, body: item.body, status: 'published', created_at: item.created_at })),
+        },
+      })
+    }
     if (url.pathname.endsWith('/task_feedback') && method === 'GET') return json([])
     if (url.pathname.endsWith('/schedule_proposals') && method === 'GET') return json([])
     const masterKind = url.pathname.split('/').at(-1) ?? ''
@@ -412,22 +427,25 @@ test('dashboard shows published news and teacher has no editor', async ({ page }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
-test('principal dashboard shows exact supervision-stage and teaching-module counts', async ({ page }) => {
+const overviewFixture = {
+  profile: { full_name: 'Pengguna Uji', role: 'principal' },
+  active: { students: 12, teachers: 4, classes: 3 },
+  supervision_stages: { '1': 2, '2': 1, '3': 0, '4': 3 },
+  teaching_modules: { submitted: 4, returned: 1 },
+  announcements: { published_count: 1, draft_count: 0, recent: [] },
+}
+
+test('principal dashboard reads supervision and module counts from one overview call', async ({ page }) => {
   await mockSchool(page, { role: 'principal' })
-  const requested: string[] = []
+  let overviewCalls = 0
+  let legacyCalls = 0
+  await page.route('**/rpc/dashboard_overview', async route => {
+    overviewCalls++
+    await route.fulfill({ json: overviewFixture })
+  })
   await page.route(/\/rest\/v1\/(academic_supervisions|teaching_modules)\?/, async route => {
-    const request = route.request()
-    const url = new URL(request.url())
-    expect(request.method()).toBe('HEAD')
-    const table = url.pathname.endsWith('/academic_supervisions') ? 'academic_supervisions' : 'teaching_modules'
-    const stage = url.searchParams.get('stage')
-    const status = url.searchParams.get('status')
-    requested.push(`${table}:${stage ?? status}`)
-    const count = stage ? ({ 'eq.1': 2, 'eq.2': 1, 'eq.3': 0, 'eq.4': 3 }[stage] ?? 0)
-      : status === 'eq.submitted' ? 4 : 1
-    await route.fulfill({ status: 200, headers: {
-      'content-range': `*/${count}`, 'access-control-expose-headers': 'content-range',
-    } })
+    legacyCalls++
+    await route.fulfill({ status: 403, json: { code: '42501' } })
   })
   await page.goto('/dashboard')
   const summary = page.getByRole('region', { name: 'Ringkasan kepala sekolah' })
@@ -437,47 +455,40 @@ test('principal dashboard shows exact supervision-stage and teaching-module coun
   await expect(summary.getByRole('article', { name: 'Tindak lanjut' })).toContainText('3')
   await expect(summary.getByRole('article', { name: 'Perlu ditinjau' })).toContainText('4')
   await expect(summary.getByRole('article', { name: 'Dikembalikan' })).toContainText('1')
-  expect(requested).toHaveLength(6)
+  expect(overviewCalls).toBe(1)
+  expect(legacyCalls).toBe(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
-test('principal dashboard does not request workflow counts for teachers', async ({ page }) => {
+test('dashboard overview stays closed for teachers', async ({ page }) => {
   await mockSchool(page, { role: 'teacher' })
   let requested = false
-  await page.route(/\/rest\/v1\/(academic_supervisions|teaching_modules)\?/, async route => {
+  await page.route('**/rpc/dashboard_overview', async route => {
     requested = true
     await route.fulfill({ status: 403, json: { code: '42501' } })
   })
   await page.goto('/dashboard')
   await expect(page.getByRole('heading', { name: 'Akses cepat' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Ringkasan kepala sekolah' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Ringkasan data sekolah' })).toHaveCount(0)
   expect(requested).toBe(false)
 })
 
-test('principal dashboard distinguishes missing counts from zero and retries', async ({ page }) => {
+test('dashboard overview failure shows a recoverable error', async ({ page }) => {
   await mockSchool(page, { role: 'principal' })
-  let retry = false
-  await page.route(/\/rest\/v1\/(academic_supervisions|teaching_modules)\?/, async route => {
-    const url = new URL(route.request().url())
-    const stage = url.searchParams.get('stage')
-    if (stage === 'eq.1' && !retry) {
-      await route.fulfill({ status: 200 })
-      return
-    }
-    const count = stage === 'eq.3' ? 0 : 2
-    await route.fulfill({ status: 200, headers: {
-      'content-range': `*/${count}`, 'access-control-expose-headers': 'content-range',
-    } })
+  let fail = true
+  await page.route('**/rpc/dashboard_overview', async route => {
+    if (fail) { await route.fulfill({ status: 500, json: { message: 'overview down' } }); return }
+    await route.fulfill({ json: overviewFixture })
   })
   await page.goto('/dashboard')
+  await expect(page.getByRole('alert').filter({ hasText: 'Ringkasan dashboard belum dapat dimuat' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ringkasan kepala sekolah' })).toHaveCount(0)
+  fail = false
+  await page.getByRole('button', { name: 'Muat ulang', exact: true }).click()
   const summary = page.getByRole('region', { name: 'Ringkasan kepala sekolah' })
-  await expect(summary.getByRole('article', { name: 'Pra-observasi' })).toContainText('N/A')
   await expect(summary.getByRole('article', { name: 'Pasca-observasi' })).toContainText('0')
-  await expect(summary.getByRole('alert').filter({ hasText: 'belum dapat dimuat' })).toBeVisible()
-  retry = true
-  await summary.getByRole('button', { name: 'Muat ulang ringkasan kepala sekolah' }).click()
-  await expect(summary.getByRole('article', { name: 'Pra-observasi' })).toContainText('2')
-  await expect(summary.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
 test('pending account can edit its profile without school announcements', async ({ page }) => {
@@ -508,7 +519,7 @@ test('manager publishes plain text announcement', async ({ page }) => {
 })
 
 test('news network errors show a retry instead of a false empty feed', async ({ page }) => {
-  await mockSchool(page, { failNews: true })
+  await mockSchool(page, { role: 'teacher', failNews: true })
   await page.goto('/dashboard')
   await expect(page.getByRole('alert').filter({ hasText: 'Sebagian informasi pengumuman belum dapat dimuat.' })).toBeVisible({ timeout: 15000 })
   await expect(page.getByText('Belum ada pengumuman terbit.', { exact: false })).toHaveCount(0)
@@ -1549,32 +1560,24 @@ for (const role of ['administrator', 'teacher', 'parent', 'pending']) {
   })
 }
 
-test('school overview uses exact active counts and preserves unknown versus zero', async ({ page }) => {
+test('school overview renders active registry counts from the overview call', async ({ page }) => {
   await mockSchool(page)
-  let retry = false
-  for (const table of ['students', 'teachers', 'school_classes']) {
-    await page.route(`**/rest/v1/${table}?**`, async route => {
-      expect(route.request().method()).toBe('HEAD')
-      expect(new URL(route.request().url()).searchParams.get('is_active')).toBe('eq.true')
-      const count = table === 'students' ? 1205 : table === 'teachers' ? 0 : 6
-      await route.fulfill({ status: 200, headers: table === 'school_classes' && !retry ? {} : { 'content-range': `*/${count}`, 'access-control-expose-headers': 'content-range' } })
-    })
-  }
+  await page.route('**/rpc/dashboard_overview', route => route.fulfill({ json: {
+    ...overviewFixture,
+    profile: { full_name: 'Pengguna Uji', role: 'administrator' },
+    active: { students: 1205, teachers: 0, classes: 6 },
+  } }))
   await page.goto('/dashboard')
   await expect(page.getByRole('article', { name: 'Siswa aktif' })).toContainText('1205')
   await expect(page.getByRole('article', { name: 'Guru aktif' })).toContainText('0')
-  await expect(page.getByRole('article', { name: 'Kelas aktif' })).toContainText('N/A')
-  await expect(page.getByRole('alert').filter({ hasText: 'Sebagian jumlah belum dapat dimuat' })).toBeVisible()
-  retry = true
-  await page.getByRole('button', { name: 'Muat ulang ringkasan' }).click()
   await expect(page.getByRole('article', { name: 'Kelas aktif' })).toContainText('6')
-  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Lihat kelas aktif' })).toBeVisible()
 })
 
 for (const role of ['teacher','student','parent','pending']) test(`school overview never requests registry totals for ${role}`, async ({ page }) => {
   await mockSchool(page, { role })
   let requested = false
-  await page.route(/\/rest\/v1\/(students|teachers|school_classes)\?/, async route => { requested = true; await route.fulfill({ status: 403, json: { code: '42501' } }) })
+  await page.route('**/rpc/dashboard_overview', async route => { requested = true; await route.fulfill({ status: 403, json: { code: '42501' } }) })
   await page.goto('/dashboard')
   await expect(page.getByRole('heading', { name: 'Akses cepat' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Ringkasan data sekolah' })).toHaveCount(0)
