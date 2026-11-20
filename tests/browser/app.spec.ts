@@ -350,6 +350,33 @@ test('teacher confirms publication of a class material draft', async ({ page }) 
   expect(writes).toBe(1)
 })
 
+test('teacher archives a published material after confirmation', async ({ page }) => {
+  await mockSchool(page, { role: 'teacher' })
+  const row = {
+    id: 'material-published', class_name: 'Kelas 1A', subject_name: 'Matematika',
+    title: 'Data Contoh Materi', body: 'Isi materi contoh', status: 'published', revision: 2,
+  }
+  let writes = 0
+  await page.route('**/rest/v1/class_materials?*', route => {
+    if (route.request().method() !== 'PATCH') return route.fulfill({ json: [row] })
+    expect(new URL(route.request().url()).searchParams.get('revision')).toBe('eq.2')
+    expect(route.request().postDataJSON()).toEqual({ status: 'archived' })
+    writes++
+    row.status = 'archived'
+    row.revision = 3
+    return route.fulfill({ json: [{ id: row.id }] })
+  })
+  await page.goto('/materi')
+  await page.getByRole('button', { name: 'Arsipkan materi' }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('Arsipkan materi ini?')
+  expect(writes).toBe(0)
+  await page.getByRole('button', { name: 'Ya, lanjutkan' }).click()
+  await expect(page.getByText('Materi diarsipkan.')).toBeVisible()
+  await expect(page.getByText('Kelas 1A · Matematika · Diarsipkan')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Arsipkan materi' })).toHaveCount(0)
+  expect(writes).toBe(1)
+})
+
 test('principal returns a teaching module with revision feedback', async ({ page }) => {
   await mockSchool(page, { role: 'principal' })
   const module = {
