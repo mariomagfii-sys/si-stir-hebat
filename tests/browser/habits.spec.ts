@@ -182,7 +182,7 @@ test('student taps habits and saves a daily record', async ({ page }) => {
 
   await page.goto('/kebiasaan')
   await expect(page.getByRole('heading', { name: '7 Kebiasaan Anak Indonesia Hebat' })).toBeVisible()
-  await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText('Catatan harian: belum diisi', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Bangun pagi/ })).toHaveAttribute('aria-pressed', 'false')
   await expect(page.getByRole('heading', { name: 'Rekap minggu ini' })).toBeVisible()
   await expect(page.getByText(/Minggu ini 3 dari 5 hari terisi\./)).toBeVisible()
@@ -198,7 +198,7 @@ test('student taps habits and saves a daily record', async ({ page }) => {
 
   await expect(page.getByText(/tersimpan dan menunggu validasi guru/)).toBeVisible()
   await expect(page.getByRole('article').filter({ hasText: 'Bangun pagi: dilakukan' })).toBeVisible()
-  await expect(page.getByText('Catatan harian — sudah diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText('Catatan harian: sudah diisi', { exact: true })).toBeVisible()
   await expect(page.getByText('Menunggu validasi guru', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Rekap 1 catatan terakhir' })).toBeVisible()
   await expect(page.getByText('1 dari 1 catatan', { exact: true })).toBeVisible()
@@ -242,7 +242,7 @@ test('empty date is shown as belum diisi and an all-empty checklist is not saved
   const state = await setupStudent(page)
 
   await page.goto('/kebiasaan')
-  await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText('Catatan harian: belum diisi', { exact: true })).toBeVisible()
   await expect(page.getByText('Tanggal ini belum diisi. Ketuk kebiasaan yang sudah dilakukan; tanggal tanpa catatan berarti belum diisi, bukan berarti tidak dilakukan.')).toBeVisible()
   await expect(page.getByText('Belum ada catatan kebiasaan. Tanggal tanpa catatan berarti belum diisi, bukan berarti tidak dilakukan.')).toBeVisible()
 
@@ -332,13 +332,13 @@ test('parent with two linked children picks one child and saves for that child o
   await expect(picker).toHaveValue('student-one')
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak B' })).toHaveCount(0)
-  await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText('Catatan harian: belum diisi', { exact: true })).toBeVisible()
   await expect(page.getByText(/Minggu ini 4 dari 5 hari terisi\./)).toBeVisible()
 
   await picker.selectOption('student-two')
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak B' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toHaveCount(0)
-  await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText('Catatan harian: belum diisi', { exact: true })).toBeVisible()
   await expect(page.getByText(/Minggu ini 1 dari 5 hari terisi\./)).toBeVisible()
   expect(state.weeklyTargets[state.weeklyTargets.length - 1]).toBe('student-two')
 
@@ -350,7 +350,7 @@ test('parent with two linked children picks one child and saves for that child o
   expect(state.saved).toHaveLength(1)
   expect(state.saved[0].student_id).toBe('student-two')
   expect(state.saved[0].habits).toEqual([false, true, false, false, false, false, false])
-  await expect(page.getByText('Catatan harian — sudah diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText('Catatan harian: sudah diisi', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 })

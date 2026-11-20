@@ -195,7 +195,7 @@ function HabitsWorkspace({ userId }: { userId: string }) {
       {(role === 'parent' || role === 'teacher') && students.length > 1 && <label className="habit-picker" htmlFor="habit-student">Pilih murid<select id="habit-student" value={studentId} onChange={event => pickStudent(event.target.value)}>{students.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       {students.length === 0 && <EmptyState>{role === 'teacher' ? 'Belum ada murid pada kelas penugasan Anda.' : 'Belum ada murid yang tertaut ke akun ini.'}</EmptyState>}
       {students.length > 0 && canWrite && <form className="announcement-editor habit-editor" onSubmit={event => { event.preventDefault(); void save() }}>
-        <fieldset className="journal-fields"><legend>Catatan harian — {existingDraft ? 'sudah diisi' : 'belum diisi'}</legend>
+        <fieldset className="journal-fields"><legend>Catatan harian: {existingDraft ? 'sudah diisi' : 'belum diisi'}</legend>
           <label htmlFor="habit-date">Tanggal</label>
           <input id="habit-date" type="date" max={schoolToday()} value={date} onChange={event => pickDate(event.target.value)} />
           <p className="help" role="status">{existingDraft ? 'Catatan untuk tanggal ini sudah ada. Ketuk kebiasaan yang dilakukan; kebiasaan yang tidak diketuk tidak dihitung sebagai terlaksana.' : 'Tanggal ini belum diisi. Ketuk kebiasaan yang sudah dilakukan; tanggal tanpa catatan berarti belum diisi, bukan berarti tidak dilakukan.'}</p>
