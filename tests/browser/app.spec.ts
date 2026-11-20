@@ -404,6 +404,38 @@ test('principal returns a teaching module with revision feedback', async ({ page
   await expect(page.getByText('Perlu revisi', { exact: false })).toBeVisible()
 })
 
+test('principal approves then archives a submitted teaching module', async ({ page }) => {
+  await mockSchool(page, { role: 'principal' })
+  const module = {
+    id: 'module-approve', title: 'Data Contoh Modul', objectives: 'Tujuan contoh',
+    activities: 'Kegiatan contoh', status: 'submitted', review_note: '', revision: 3,
+    teacher_assignments: { id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' } },
+  }
+  const writes: Array<Record<string, unknown>> = []
+  await page.route('**/rest/v1/teaching_modules?*', route => {
+    if (route.request().method() === 'PATCH') {
+      expect(new URL(route.request().url()).searchParams.get('revision')).toBe(`eq.${module.revision}`)
+      const body = route.request().postDataJSON() as Record<string, unknown>
+      writes.push(body)
+      Object.assign(module, body, { revision: module.revision + 1 })
+      return route.fulfill({ json: [{ id: module.id }] })
+    }
+    return route.fulfill({ json: [module] })
+  })
+  await page.goto('/modul-ajar')
+  await page.getByRole('button', { name: 'Data Contoh Modul' }).click()
+  await page.getByLabel('Catatan pemeriksaan').fill('Lengkap dan sesuai.')
+  await page.getByRole('button', { name: 'Setujui modul' }).click()
+  await expect(page.getByText('Status modul diperbarui.')).toBeVisible()
+  expect(writes).toEqual([{ status: 'approved', review_note: 'Lengkap dan sesuai.' }])
+  await expect(page.getByText('Disetujui · Kelas 1A · Matematika').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Data Contoh Modul' }).click()
+  await page.getByRole('button', { name: 'Arsipkan modul' }).click()
+  await expect(page.getByText('Status modul diperbarui.')).toBeVisible()
+  expect(writes.at(-1)).toEqual({ status: 'archived' })
+  await expect(page.getByText('Diarsipkan · Kelas 1A · Matematika')).toBeVisible()
+})
+
 test('guardian cannot open the account linking form directly', async ({ page }) => {
   await mockSchool(page, { role: 'parent' })
   await page.goto('/tautan-akun')

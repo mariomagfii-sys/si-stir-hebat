@@ -1,8 +1,8 @@
 # Cakupan Uji Otomatis
 
 Status: verifikasi lokal 20 November 2026
-Sumber: `tests/browser/app.spec.ts`, `communication.spec.ts`, `notifications.spec.ts`, `absence-reports.spec.ts`, `habits.spec.ts`, dan `audit-responsive.spec.ts` (308 skenario termasuk desktop + ponsel); `tests/*.test.mjs` (137 tes unit/database).
-Bukti terbaru Qoder: Node v24.22.3, suite penuh **308/308 lulus** (port 5387, 7,0 menit; log `C:\Users\axioo\AppData\Local\Temp\qoder-qa-2026-11-18\browser-full-5387.log`, EXIT 0). Run sebelumnya 306/306 port 5383 lulus (log `...\browser-full-5383.log`). `npm run check` EXIT 0: **137/137** tes unit/database, 39 migration, CI check, lint, typecheck, build 1.781 modul, audit 26 JS tanpa demo (log `...\check-5387.log`). Nilai Supabase build sintetis proses-lokal; `dist/` diperbarui. Delivery Gate UI: `docs/DELIVERY_GATE_2026-11-20.md`.
+Sumber: `tests/browser/app.spec.ts`, `communication.spec.ts`, `notifications.spec.ts`, `absence-reports.spec.ts`, `habits.spec.ts`, dan `audit-responsive.spec.ts` (310 skenario termasuk desktop + ponsel); `tests/*.test.mjs` (137 tes unit/database).
+Bukti terbaru Qoder: Node v24.22.3, suite penuh **310/310 lulus** (port 5391, 7,8 menit; log `C:\Users\axioo\AppData\Local\Temp\qoder-qa-2026-11-18\browser-full-5391.log`, EXIT 0). Run sebelumnya 308/308 port 5387 lulus (log `...\browser-full-5387.log`). `npm run check` EXIT 0: **137/137** tes unit/database, 39 migration, CI check, lint, typecheck, build 1.781 modul, audit bundel tanpa akun demo (log `...\check-5391.log`). Nilai Supabase build sintetis proses-lokal; `dist/` diperbarui. Delivery Gate UI: `docs/DELIVERY_GATE_2026-11-20.md`.
 
 Cara membaca: "Ada" berarti minimal satu skenario browser pada desktop dan ponsel dengan API tiruan. Semua modul di bawah **belum** diuji dengan akun sekolah nyata; lihat [UAT_CHECKLIST.md](UAT_CHECKLIST.md).
 
@@ -18,7 +18,7 @@ Cara membaca: "Ada" berarti minimal satu skenario browser pada desktop dan ponse
 | Impor Excel | preview wajib, penolakan duplikat/tipe, retry request ID sama | file rusak/terkunci di sisi server |
 | Rekap absensi | rentang >31 hari ditolak, agregasi hanya baris sendiri (siswa), ekspor CSV | ekspor PDF rekap absensi |
 | Jurnal | simpan + konfirmasi, retry ID sama, baca admin/kepala sekolah, penolakan siswa/wali/pending, pagination/CSV, status kesiapan | persetujuan/koreksi jurnal |
-| Modul ajar | guru simpan draf, guru ajukan, kepala sekolah kembalikan dengan catatan | persetujuan/koreksi lanjutan, lampiran |
+| Modul ajar | guru simpan draf, guru ajukan, kepala sekolah kembalikan dengan catatan, kepala sekolah setujui lalu arsipkan modul terbit | lampiran |
 | Materi kelas | guru terbitkan, siswa membaca terbit tanpa kontrol tulis, guru mengarsipkan materi terbit setelah konfirmasi (tanpa tulis sebelum setuju) | lampiran |
 | Tugas kelas | siswa melihat tenggat, siswa mengirim jawaban (sukses/respons hilang/duplikat), guru membuat tugas, umpan balik guru, wali membaca umpan balik | pengumpulan lampiran, penilaian tugas→asesmen |
 | Asesmen & rekap | guru buat/nilai nol/terbit/koreksi+riwayat, konflik revisi, laporan filter/grafik/ekspor CSV-Excel-PDF, mode terpotong/limpas/gagal, wali hanya hasil terbit, pending ditolak, peran baca-saja | kewenangan wali kelas, perubahan peserta |
@@ -44,7 +44,7 @@ Cara membaca: "Ada" berarti minimal satu skenario browser pada desktop dan ponse
 ## Batas
 
 - Tes browser memakai API tiruan (`page.route`) dan sesi sintetis; bukan bukti RLS hosted.
-- Run penuh terbaru bersih: 308/308 lulus pada 20 November 2026 (Node v24.22.3, port 5387, 7,0 menit, 6 berkas spesifikasi termasuk `audit-responsive.spec.ts`). Tambahan 2 skenario berasal dari tes arsip materi kelas. Run sebelumnya 306/306 port 5383 bersih; kegagalan tunggal di port 5381 adalah chunk rute lazy yang belum selesai saat assertion 5 detik; setelah batas assertion pending-master dinaikkan ke 15 detik, run 5383 bersih.
+- Run penuh terbaru bersih: 310/310 lulus pada 20 November 2026 (Node v24.22.3, port 5391, 7,8 menit, 6 berkas spesifikasi termasuk `audit-responsive.spec.ts`). Tambahan 2 skenario berasal dari tes arsip materi kelas, dan 2 dari persetujuan lalu pengarsipan modul ajar oleh kepala sekolah. Percobaan port 5389 tidak valid: server Vite kehabisan heap (OOM) pada tes ke-43 sehingga sisa tes gagal `ERR_CONNECTION_REFUSED`; run diulang dengan heap 4 GB (`NODE_OPTIONS`) di port 5391 dan bersih. Run sebelumnya 308/308 port 5387 bersih; kegagalan tunggal di port 5381 adalah chunk rute lazy yang belum selesai saat assertion 5 detik; setelah batas assertion pending-master dinaikkan ke 15 detik, run 5383 bersih.
 - Riwayat: run Qoder 18 November (port 5331) 215/216 dan run T-A Copilot 18 November (port 5191, Node v26.13.0) 213/216; kegagalan assertion keduanya adalah tes beranda usang, ditambah satu `ENOENT` artefak trace saat teardown. Angka itu tidak lagi menjadi status terkini.
 - Hasil di atas memakai API tiruan dan tidak menggantikan UAT.
 - Kesenjangan yang butuh keputusan produk (kehadiran guru, komunikasi, dokumen) tercatat di [DECISIONS.md](DECISIONS.md) dan [HANDOFF.md](HANDOFF.md).
