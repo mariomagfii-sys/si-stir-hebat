@@ -1089,9 +1089,13 @@ test('xlsx import previews and confirms before writing attendance',async({page})
   expect((await downloaded).suggestedFilename()).toBe(`template-absensi-${schoolToday()}.xlsx`)
   await expect(page.getByRole('button',{name:'Unduh template Excel'})).toBeEnabled()
   await expect(page.getByLabel('Pilih file Excel')).toBeEnabled()
-  await page.getByLabel('Pilih file Excel').setInputFiles({name:'data-contoh.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer})
-  // Parsing happens in a worker; keep the first preview assertion tolerant of a loaded CI machine.
-  await expect(page.getByRole('heading',{name:'Preview impor',exact:true})).toBeVisible({timeout:15000})
+  const preview=page.getByRole('heading',{name:'Preview impor',exact:true})
+  // The parser is a lazily imported chunk: Vite dev pre-bundles it on first upload and may reload
+  // the page, clearing the selected file. Re-select and retry until the preview actually renders.
+  await expect(async()=>{
+    await page.getByLabel('Pilih file Excel').setInputFiles({name:'data-contoh.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer})
+    await expect(preview).toBeVisible({timeout:5000})
+  }).toPass({timeout:30000})
   await expect(page.getByRole('table',{name:'Perubahan dari file Excel'})).toContainText('Data Contoh Satu')
   expect(mock.importRequestIds.length).toBe(0)
   await page.getByRole('button',{name:'Konfirmasi impor',exact:true}).click()

@@ -28,7 +28,7 @@ Status: **sebagian**. Yang dapat diverifikasi ulang tanpa akun/hosted:
 
 ## 3. Suite browser penuh
 
-`npx playwright test` pada Node v24.22.3, port 5377: **304/304 lulus** (desktop 1280x900 + ponsel 390x844, 12,7 menit, EXIT 0) setelah penambahan skenario `55000`. Log: `C:\Users\axioo\AppData\Local\Temp\qoder-qa-2026-11-18\browser-full-55000-5377.log`. Ini adalah angka kanonik browser menggantikan 300/304-kondisi-sebelumnya; tes memakai API tiruan, bukan UAT. Diperbarui 20 November 2026: suite penuh berikutnya **306/306** (port 5383, 7,3 menit, log `...\browser-full-5383.log`) menjadi angka kanonik; rincian di `docs/QA_COVERAGE.md`.
+`npx playwright test` pada Node v24.22.3, port 5377: **304/304 lulus** (desktop 1280x900 + ponsel 390x844, 12,7 menit, EXIT 0) setelah penambahan skenario `55000`. Log: `C:\Users\axioo\AppData\Local\Temp\qoder-qa-2026-11-18\browser-full-55000-5377.log`. Ini adalah angka kanonik browser menggantikan 300/304-kondisi-sebelumnya; tes memakai API tiruan, bukan UAT. Diperbarui 20 November 2026: suite penuh **312/312** (port 5401, 8,8 menit, log `...\browser-full-5401.log`) menjadi angka kanonik; `npm run check` EXIT 0 (137/137, 39 migration, 1.781 modul; log `...\check-5401.log`). Rincian di `docs/QA_COVERAGE.md`.
 
 ## 4. Kesimpulan jujur
 

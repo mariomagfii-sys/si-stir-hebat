@@ -219,3 +219,80 @@ test('recent recap stays per-child and is labeled as growth, not ranking', async
   await expect(page.getByText(/Peringkat|Juara|Terbaik/)).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 })
+
+async function setupParentWithTwoChildren(page: Page) {
+  const saved: Array<Record<string, unknown>> = []
+  const records: HabitRow[] = [
+    makeHabitRow({ id: 'habit-a', student_id: 'student-one', notes: 'Data Contoh catatan anak A' }),
+    makeHabitRow({ id: 'habit-b', student_id: 'student-two', notes: 'Data Contoh catatan anak B' }),
+  ]
+
+  await installSession(page)
+  await page.route('https://school-abc.supabase.co/**', async route => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const json = (data: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
+
+    if (url.pathname.endsWith('/user')) return json({ user })
+    if (url.pathname.endsWith('/profiles')) return json([{ role: 'parent' }])
+    if (url.pathname.endsWith('/rpc/habit_students')) return json([
+      { id: 'student-one', name: 'Data Contoh Anak A' },
+      { id: 'student-two', name: 'Data Contoh Anak B' },
+    ])
+
+    if (url.pathname.endsWith('/habit_records')) {
+      if (request.method() === 'POST') {
+        const payload = request.postDataJSON()
+        saved.push(payload)
+        const row = makeHabitRow({
+          id: 'habit-b-new',
+          student_id: String(payload.student_id),
+          record_date: payload.record_date,
+          habits: payload.habits,
+          notes: payload.notes,
+          updated_at: '2026-11-19T02:00:00.000Z',
+        })
+        records.unshift(row)
+        return json(row, 201)
+      }
+      const filter = url.searchParams.get('student_id') ?? ''
+      const rows = filter.startsWith('eq.') ? records.filter(row => row.student_id === filter.slice(3)) : records
+      const start = Number(url.searchParams.get('offset') ?? 0)
+      const limit = Number(url.searchParams.get('limit') ?? 26)
+      return json(rows.slice(start, start + limit))
+    }
+
+    throw new Error(`Permintaan Supabase tidak dikenal: ${request.method()} ${url.pathname}`)
+  })
+
+  return { saved }
+}
+
+test('parent with two linked children picks one child and saves for that child only', async ({ page }) => {
+  const state = await setupParentWithTwoChildren(page)
+
+  await page.goto('/kebiasaan')
+  const picker = page.getByLabel('Pilih murid')
+  await expect(picker).toBeVisible()
+  await expect(picker).toHaveValue('student-one')
+  await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Data Contoh Anak B' })).toHaveCount(0)
+  await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+
+  await picker.selectOption('student-two')
+  await expect(page.getByRole('heading', { name: 'Data Contoh Anak B' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toHaveCount(0)
+  await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: /Beribadah/ }).click()
+  await page.getByLabel('Catatan tambahan').fill('Data Contoh anak B beribadah')
+  await page.getByRole('button', { name: 'Simpan catatan' }).click()
+
+  await expect(page.getByText(/tersimpan dan menunggu validasi guru/)).toBeVisible()
+  expect(state.saved).toHaveLength(1)
+  expect(state.saved[0].student_id).toBe('student-two')
+  expect(state.saved[0].habits).toEqual([false, true, false, false, false, false, false])
+  await expect(page.getByText('Catatan harian — sudah diisi', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+})

@@ -141,7 +141,34 @@ Layar: `D` = desktop, `M` = ponsel, `D+M` = keduanya.
 | X-04 | Jalankan `npm run check:supabase` dengan `.env.local` benar. | Auth aktif; seluruh tabel pada daftar menolak anonim; tidak membaca baris data. | D | | |
 | X-05 | Periksa Network saat login/ubah profil. | Tidak ada secret/service role key; peran tidak dapat diubah dari metadata pengguna. | D | | |
 
-## 9. Setelah UAT
+## 9. Modul baru — 20 November 2026
+
+Semua baris di bawah **belum dijalankan dengan akun sekolah nyata**. Migration `20261118000100`–`20261118000400` juga belum diterapkan hosted, sehingga skenario yang membutuhkan tabel tersebut baru dapat dijalankan setelah persetujuan dan penerapan migration.
+
+| ID | Langkah | Hasil diharapkan | Layar | L/G | Catatan |
+| --- | --- | --- | --- | --- | --- |
+| N-01 | A/K/G/S/W buka `/notifikasi`. | Hanya notifikasi milik akun sendiri; maksimal 25 baris per halaman; label kategori dan prioritas berbahasa Indonesia. | D+M | | Butuh tabel `notifications` hosted. |
+| N-02 | W tandai satu notifikasi sudah dibaca, muat ulang halaman. | Penanda "Belum dibaca" hilang dan tetap hilang setelah muat ulang; waktu baca tampil. | D+M | | Panggilan `mark_notification_read`. |
+| N-03 | Putuskan koneksi saat menandai notifikasi, lalu coba lagi. | Pesan galat menyebut judul notifikasi; tombol tetap tersedia; percobaan ulang berhasil tanpa duplikasi. | D+M | | Diuji browser dengan API tiruan (suite penuh 312/312 port 5401, 20 November 2026), bukan akun nyata. |
+| N-04 | S sebagai akun lain memanggil Data API `notifications` dengan sesi G. | Tidak ada baris; penolakan dari RLS. | D | | Periksa tab Network, jangan unduh data. |
+| N-05 | P (pending) buka `/notifikasi` lewat URL. | Tidak ada tautan navigasi Notifikasi; bila URL dibuka langsung, tidak ada notifikasi yang tampil. | D+M | | |
+| KB-01 | S atau W isi `/kebiasaan` hari ini lalu simpan. | Catatan tersimpan per tanggal; guru melihat status "Menunggu validasi guru"; wali dengan beberapa anak memilih murid lebih dulu; rekap 7 catatan terakhir tampil per indikator tanpa peringkat. | D+M | | Tanggal tanpa catatan tampil "belum diisi"; model catatan per tanggal masih boolean (PD-12 terbuka). Pemilih murid untuk wali dua anak diuji browser dengan API tiruan (POST hanya untuk anak dipilih), bukan akun nyata. |
+| KB-02 | G validasi catatan setelah konfirmasi orang tua, pertama tanpa catatan lalu dengan catatan. | Tanpa catatan ditolak; dengan catatan status menjadi "Tervalidasi" dan catatan guru tercatat. | D+M | | Diuji browser dengan API tiruan (2 skenario × desktop/ponsel), bukan akun nyata. |
+| KB-03 | S atau W membuka `/kebiasaan` pada tanggal tanpa isian, lalu simpan checklist kosong. | Tanggal kosong berlabel "belum diisi" (bukan "tidak dilakukan"); checklist kosong tidak tersimpan dan tidak dianggap catatan baru. | D+M | | Diuji browser dengan API tiruan, bukan akun nyata. |
+| KB-04 | Periksa rekap setelah beberapa catatan terkumpul. | Rekap berlabel pertumbuhan/perkembangan anak; tidak ada kata peringkat/juara/terbaik dan tidak ada perbandingan antarmurid. | D+M | | Sesuai D6; diuji browser dengan API tiruan. |
+| AR-01 | W buka `/laporan-ketidakhadiran`, pilih anak, isi tanggal lampau dan alasan, kirim. | Laporan tersimpan; status "Menunggu pemeriksaan guru"; tanggal mendatang ditolak. | D+M | | Butuh migration `20261118000200` hosted. |
+| AR-02 | W kirim dua laporan aktif untuk anak dan tanggal yang sama. | Laporan kedua ditolak sebagai duplikat; tidak ada baris ganda. | D+M | | Unique index laporan aktif per anak/tanggal. |
+| AR-03 | G dari kelas lain berusaha melihat daftar lewat URL. | Hanya laporan kelas yang ditugaskan; murid kelas lain tidak tampil. | D | | |
+| AR-04 | G konfirmasi tanpa catatan, lalu isi catatan dan putuskan. | Tanpa catatan ditolak; dengan catatan status berubah dan catatan tampil ke wali. | D+M | | |
+| AR-05 | W kirim laporan, matikan koneksi tepat setelah menekan kirim, lalu tekan "Kirim ulang laporan". | Permintaan ulang memakai ID permintaan yang sama; tidak ada laporan ganda. | D+M | | Diuji browser dengan respons hilang tiruan, bukan akun nyata. |
+| AR-06 | G membuka laporan yang tidak cocok dengan tepat satu sesi absensi. | Pesan 55000 tampil sebagai tindak lanjut yang jelas; status absensi tidak berubah dan tidak ada sukses palsu; G dapat kembali ke daftar. | D+M | | Butuh sesi absensi sintetis; diuji browser dengan API tiruan. |
+| AR-07 | G memutuskan saat laporan sudah diubah wali di waktu yang sama (konflik revisi 40001). | Pesan meminta muat ulang; setelah muat ulang keputusan dapat dikonfirmasi dengan data terbaru. | D+M | | Diuji browser dengan API tiruan. |
+| MK-01 | G menerbitkan materi lalu mengarsipkannya lewat dialog konfirmasi; S membuka materi terbit. | Arsip baru berubah setelah "Ya, lanjutkan"; S melihat materi terbit tanpa tombol tulis/arsip. | D+M | | Diuji browser dengan API tiruan (desktop + ponsel). |
+| MJ-01 | K menyetujui modul ajar berstatus Diajukan dengan catatan, lalu mengarsipkannya. | Status berpindah Disetujui → Diarsipkan setelah konfirmasi; catatan pemeriksaan terkirim bersama persetujuan dan tampil di detail modul. | D+M | | Diuji browser dengan API tiruan (desktop + ponsel); tampilan pihak guru belum diuji pada alur ini. |
+| KM-01 | G kirim pesan di `/komunikasi` saat koneksi terputus lalu coba lagi. | Pesan tidak ganda; konfirmasi tampil setelah respons diterima; halaman berikutnya memakai sentinel 25 baris. | D+M | | Diuji browser dengan API tiruan. |
+| R-01 | A membuka `/sekolah` dengan lebih dari 1.000 referensi master. | Muncul pemberitahuan "Sebagian daftar referensi dipotong…" alih-alih galat. | D | | Butuh data seed besar; jangan memakai data siswa nyata. |
+
+## 10. Setelah UAT
 
 1. Kumpulkan semua baris `G` ke bagian "Permintaan Lintas AI" pada [AI_COORDINATION.md](AI_COORDINATION.md) beserta modul dan langkah.
 2. Jangan memperbaiki kode saat sesi UAT; perbaikan dilakukan pemilik modul.
