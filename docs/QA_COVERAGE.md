@@ -1,8 +1,8 @@
 # Cakupan Uji Otomatis
 
-Status: audit 15 November 2026 (Kilo/QA)
-Sumber: `tests/browser/app.spec.ts` (212 skenario = 106 kasus × desktop + ponsel) dan `tests/*.test.mjs` (114 tes unit/database).
-Bukti run penuh terakhir: `docs/qa-logs/test-browser-2026-11-15-r1.log` (212/212 lulus, 5,3 menit) dan `docs/qa-logs/check-2026-11-15-r1.log` (`npm run check` lulus, 114/114 tes unit).
+Status: verifikasi lokal 20 November 2026
+Sumber: `tests/browser/app.spec.ts`, `communication.spec.ts`, `notifications.spec.ts`, `absence-reports.spec.ts`, `habits.spec.ts`, dan `audit-responsive.spec.ts` (304 skenario termasuk desktop + ponsel); `tests/*.test.mjs` (137 tes unit/database).
+Bukti terbaru: 20 November 2026 pada Node v24.22.3, suite penuh **304/304 lulus** (port 5377, 12,7 menit; log `C:\Users\axioo\AppData\Local\Temp\qoder-qa-2026-11-18\browser-full-55000-5377.log`), dan `npm run check` lulus dengan **137/137** tes unit/database, 39 migration, lint, typecheck, build 26 berkas (log `...\check-55000.log`). Delivery Gate UI: `docs/DELIVERY_GATE_2026-11-20.md`.
 
 Cara membaca: "Ada" berarti minimal satu skenario browser pada desktop dan ponsel dengan API tiruan. Semua modul di bawah **belum** diuji dengan akun sekolah nyata; lihat [UAT_CHECKLIST.md](UAT_CHECKLIST.md).
 
@@ -25,7 +25,10 @@ Cara membaca: "Ada" berarti minimal satu skenario browser pada desktop dan ponse
 | Jadwal | admin buat/ubah/konflik, usulan guru, keputusan admin (termasuk revisi usang), riwayat kepala sekolah, filter kelas | penarikan usulan guru, pemecahan periode |
 | Supervisi | jadwal→observasi, simpan otomatis + konflik, unggah bukti privat, laporan + ekspor, penolakan siswa/wali/pending | instrumen resmi, tanda tangan digital |
 | Tautan akun & wali | admin meninjau tautan, portal wali & pencabutan relasi, penolakan wali pada formulir tautan, penolakan guru/siswa/wali/pending | verifikasi identitas manual |
-| Komunikasi (baru) | belum ada tes; UI `/komunikasi` sedang dikerjakan | seluruh alur UI (menunggu U1) |
+| Komunikasi | 2 skenario UI: respons insert hilang dan konfirmasi pesan; pagination melewati batas 25 baris tanpa celah | pengujian dengan akun sekolah nyata, supervisi/retensi/notifikasi sesuai keputusan pemilik |
+| Pusat notifikasi | 2 skenario UI: tanda-baca gagal lalu diulang tanpa kehilangan notifikasi; pagination 25 baris dengan sentinel | pembuatan notifikasi oleh modul lain (pengumuman, ketidakhadiran, supervisi, asesmen), badge jumlah belum dibaca di navigasi, akun sekolah nyata |
+| Laporan ketidakhadiran | 3 skenario UI: wali mengirim ulang laporan dengan ID sama setelah respons hilang; guru memuat ulang setelah konflik revisi lalu mengonfirmasi; guru mendapat pesan tindak lanjut saat tidak ada tepat satu sesi absensi cocok (`55000`), tanpa sukses palsu, dan dapat kembali ke daftar | perbaikan laporan oleh wali, lampiran bukti, notifikasi otomatis ke guru, akun sekolah nyata |
+| 7 Kebiasaan | 2 skenario UI: murid menandai kebiasaan lalu menyimpan; guru wajib mengisi catatan validasi sebelum menandai tervalidasi; rekap 7 catatan terakhir terverifikasi browser pada run 228/228 port 5358 | pembeda "belum diisi" vs "tidak dilakukan" (PD-12), form wali dengan beberapa anak, akun sekolah nyata |
 | Administrasi dokumen | belum ada implementasi | seluruh modul (menunggu C2/U2) |
 
 ## Uji non-browser
@@ -41,5 +44,7 @@ Cara membaca: "Ada" berarti minimal satu skenario browser pada desktop dan ponse
 ## Batas
 
 - Tes browser memakai API tiruan (`page.route`) dan sesi sintetis; bukan bukti RLS hosted.
-- Angka 202 adalah jumlah skenario terdaftar/tereksekusi pada 15 November 2026 (log tersimpan); jalankan ulang setelah modul baru masuk.
+- Run penuh terbaru bersih: 304/304 lulus pada 20 November 2026 (Node v24.22.3, port 5377, 6 berkas spesifikasi termasuk `audit-responsive.spec.ts`). Flake timeout mobile pada run sebelumnya (port 5372) tidak muncul di run 5377. Riwayat kegagalan lama berasal dari tes beranda usang yang sudah disesuaikan, bukan regresi fitur.
+- Riwayat: run Qoder 18 November (port 5331) 215/216 dan run T-A Copilot 18 November (port 5191, Node v26.13.0) 213/216; kegagalan assertion keduanya adalah tes beranda usang, ditambah satu `ENOENT` artefak trace saat teardown. Angka itu tidak lagi menjadi status terkini.
+- Hasil di atas memakai API tiruan dan tidak menggantikan UAT.
 - Kesenjangan yang butuh keputusan produk (kehadiran guru, komunikasi, dokumen) tercatat di [DECISIONS.md](DECISIONS.md) dan [HANDOFF.md](HANDOFF.md).
