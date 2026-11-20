@@ -50,6 +50,39 @@ function makeHabitRow(overrides: Partial<HabitRow> = {}): HabitRow {
   }
 }
 
+type WeeklyRow = {
+  student_id: string
+  student_name: string
+  days_expected: number
+  days_filled: number
+  days_missing: number
+  bangun_pagi: number
+  beribadah: number
+  berolahraga: number
+  makan_sehat: number
+  gemar_belajar: number
+  bermasyarakat: number
+  tidur_cepat: number
+}
+
+function makeWeeklyRow(overrides: Partial<WeeklyRow> = {}): WeeklyRow {
+  return {
+    student_id: 'student-one',
+    student_name: 'Saya',
+    days_expected: 5,
+    days_filled: 3,
+    days_missing: 2,
+    bangun_pagi: 3,
+    beribadah: 2,
+    berolahraga: 1,
+    makan_sehat: 2,
+    gemar_belajar: 1,
+    bermasyarakat: 0,
+    tidur_cepat: 2,
+    ...overrides,
+  }
+}
+
 async function installSession(page: Page) {
   await page.addInitScript(({ storedSession }) => {
     localStorage.setItem('sb-school-abc-auth-token', JSON.stringify(storedSession))
@@ -65,6 +98,7 @@ async function expectNoHorizontalOverflow(page: Page) {
 
 async function setupStudent(page: Page) {
   const saved: Array<Record<string, unknown>> = []
+  const weeklyTargets: Array<string | null> = []
   const records: HabitRow[] = []
 
   await installSession(page)
@@ -76,6 +110,10 @@ async function setupStudent(page: Page) {
     if (url.pathname.endsWith('/user')) return json({ user })
     if (url.pathname.endsWith('/profiles')) return json([{ role: 'student' }])
     if (url.pathname.endsWith('/rpc/habit_students')) return json([{ id: 'student-one', name: 'Saya' }])
+    if (url.pathname.endsWith('/rpc/habit_weekly_summary')) {
+      weeklyTargets.push((request.postDataJSON()?.target_student ?? null) as string | null)
+      return json([makeWeeklyRow()])
+    }
 
     if (url.pathname.endsWith('/habit_records')) {
       if (request.method() === 'POST') {
@@ -98,7 +136,7 @@ async function setupStudent(page: Page) {
     throw new Error(`Permintaan Supabase tidak dikenal: ${request.method()} ${url.pathname}`)
   })
 
-  return { saved, records }
+  return { saved, records, weeklyTargets }
 }
 
 async function setupTeacher(page: Page, record: HabitRow) {
@@ -114,6 +152,7 @@ async function setupTeacher(page: Page, record: HabitRow) {
     if (url.pathname.endsWith('/user')) return json({ user })
     if (url.pathname.endsWith('/profiles')) return json([{ role: 'teacher' }])
     if (url.pathname.endsWith('/rpc/habit_students')) return json([{ id: 'student-one', name: 'Data Contoh Siswa A' }])
+    if (url.pathname.endsWith('/rpc/habit_weekly_summary')) return json([makeWeeklyRow({ student_name: 'Data Contoh Siswa A', days_filled: 4, days_missing: 1 })])
 
     if (url.pathname.endsWith('/habit_records')) {
       if (request.method() === 'PATCH') {
@@ -145,6 +184,10 @@ test('student taps habits and saves a daily record', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '7 Kebiasaan Anak Indonesia Hebat' })).toBeVisible()
   await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Bangun pagi/ })).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByRole('heading', { name: 'Rekap minggu ini' })).toBeVisible()
+  await expect(page.getByText(/Minggu ini 3 dari 5 hari terisi\./)).toBeVisible()
+  await expect(page.getByText(/2 hari belum diisi, bukan berarti tidak dilakukan/)).toBeVisible()
+  expect(state.weeklyTargets[0]).toBe('student-one')
 
   await page.getByRole('button', { name: /Bangun pagi/ }).click()
   await expect(page.getByRole('button', { name: /Bangun pagi/ })).toHaveAttribute('aria-pressed', 'true')
@@ -222,6 +265,7 @@ test('recent recap stays per-child and is labeled as growth, not ranking', async
 
 async function setupParentWithTwoChildren(page: Page) {
   const saved: Array<Record<string, unknown>> = []
+  const weeklyTargets: Array<string> = []
   const records: HabitRow[] = [
     makeHabitRow({ id: 'habit-a', student_id: 'student-one', notes: 'Data Contoh catatan anak A' }),
     makeHabitRow({ id: 'habit-b', student_id: 'student-two', notes: 'Data Contoh catatan anak B' }),
@@ -239,6 +283,17 @@ async function setupParentWithTwoChildren(page: Page) {
       { id: 'student-one', name: 'Data Contoh Anak A' },
       { id: 'student-two', name: 'Data Contoh Anak B' },
     ])
+    if (url.pathname.endsWith('/rpc/habit_weekly_summary')) {
+      const target = String(request.postDataJSON()?.target_student ?? 'student-one')
+      weeklyTargets.push(target)
+      const isSecond = target === 'student-two'
+      return json([makeWeeklyRow({
+        student_id: target,
+        student_name: isSecond ? 'Data Contoh Anak B' : 'Data Contoh Anak A',
+        days_filled: isSecond ? 1 : 4,
+        days_missing: isSecond ? 4 : 1,
+      })])
+    }
 
     if (url.pathname.endsWith('/habit_records')) {
       if (request.method() === 'POST') {
@@ -265,7 +320,7 @@ async function setupParentWithTwoChildren(page: Page) {
     throw new Error(`Permintaan Supabase tidak dikenal: ${request.method()} ${url.pathname}`)
   })
 
-  return { saved }
+  return { saved, weeklyTargets }
 }
 
 test('parent with two linked children picks one child and saves for that child only', async ({ page }) => {
@@ -278,11 +333,14 @@ test('parent with two linked children picks one child and saves for that child o
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak B' })).toHaveCount(0)
   await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Minggu ini 4 dari 5 hari terisi\./)).toBeVisible()
 
   await picker.selectOption('student-two')
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak B' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak A' })).toHaveCount(0)
   await expect(page.getByText('Catatan harian — belum diisi', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Minggu ini 1 dari 5 hari terisi\./)).toBeVisible()
+  expect(state.weeklyTargets[state.weeklyTargets.length - 1]).toBe('student-two')
 
   await page.getByRole('button', { name: /Beribadah/ }).click()
   await page.getByLabel('Catatan tambahan').fill('Data Contoh anak B beribadah')

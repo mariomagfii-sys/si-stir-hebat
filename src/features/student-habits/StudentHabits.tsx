@@ -4,11 +4,19 @@ import { useAuth } from '../../lib/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
 import { schoolToday } from '../attendance/attendance-model'
 import { supabase } from '../../lib/supabase'
-import { daftarKebiasaan, habitLabels, simpanKebiasaan, validasiKebiasaan, type HabitRecord } from './api'
+import { daftarKebiasaan, habitLabels, ringkasanKebiasaanMingguan, simpanKebiasaan, validasiKebiasaan, type HabitRecord, type HabitWeeklySummary } from './api'
 
 type RosterStudent = { id: string; name: string }
 
 const readerRoles = ['student', 'parent', 'teacher', 'principal', 'administrator']
+
+const weeklyKeys = ['bangun_pagi', 'beribadah', 'berolahraga', 'makan_sehat', 'gemar_belajar', 'bermasyarakat', 'tidur_cepat'] as const
+
+function weekStartOf(isoDate: string) {
+  const day = new Date(`${isoDate}T00:00:00`)
+  day.setDate(day.getDate() - ((day.getDay() + 6) % 7))
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+}
 
 function errorCode(thrown: unknown) {
   return typeof thrown === 'object' && thrown !== null && 'code' in thrown ? String((thrown as { code?: unknown }).code ?? '') : ''
@@ -43,6 +51,9 @@ function HabitsWorkspace({ userId }: { userId: string }) {
   const [actionError, setActionError] = useState('')
   const [denied, setDenied] = useState(false)
   const [message, setMessage] = useState('')
+  const [weekly, setWeekly] = useState<HabitWeeklySummary | null>(null)
+  const [weeklyState, setWeeklyState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [weeklyAttempt, setWeeklyAttempt] = useState(0)
   const dirtyRef = useRef(false)
   const dateRef = useRef(date)
   dirtyRef.current = dirty
@@ -98,6 +109,21 @@ function HabitsWorkspace({ userId }: { userId: string }) {
   }, [studentId, page, applyDraft])
 
   useEffect(() => { void loadRows() }, [loadRows])
+
+  const loadWeekly = useCallback(async () => {
+    if (!supabase || !studentId) { setWeekly(null); setWeeklyState('idle'); return }
+    setWeeklyState('loading')
+    try {
+      const result = await ringkasanKebiasaanMingguan(supabase, weekStartOf(schoolToday()), studentId)
+      setWeekly(result.items[0] ?? null)
+      setWeeklyState('ready')
+    } catch {
+      setWeekly(null)
+      setWeeklyState('error')
+    }
+  }, [studentId])
+
+  useEffect(() => { void loadWeekly() }, [loadWeekly, weeklyAttempt])
 
   function pickDate(next: string) {
     setDate(next)
@@ -185,6 +211,16 @@ function HabitsWorkspace({ userId }: { userId: string }) {
           <button className="button" type="submit">{existingDraft ? 'Perbarui catatan' : 'Simpan catatan'}</button>
         </fieldset>
       </form>}
+      {students.length > 0 && <section className="habit-recap" aria-labelledby="habit-weekly-title">
+        <h2 id="habit-weekly-title">Rekap minggu ini</h2>
+        {weeklyState === 'loading' && <p className="help" role="status">Memuat rekap minggu ini…</p>}
+        {weeklyState === 'error' && <p className="error" role="alert">Rekap minggu ini belum dapat dimuat. <button className="text-button" type="button" onClick={() => setWeeklyAttempt(value => value + 1)}>Coba lagi</button></p>}
+        {weeklyState === 'ready' && !weekly && <p className="help">Belum ada rekap untuk minggu ini. Hari tanpa catatan berarti belum diisi, bukan berarti tidak dilakukan.</p>}
+        {weeklyState === 'ready' && weekly && <>
+          <p className="help">Minggu ini {weekly.days_filled} dari {weekly.days_expected} hari terisi. {weekly.days_missing} hari belum diisi, bukan berarti tidak dilakukan. Rekap untuk melihat perkembangan, bukan peringkat.</p>
+          <ul className="habit-recap-list">{habitLabels.map((label, index) => <li key={label}><strong>{label}</strong><span>{weekly[weeklyKeys[index]]} hari</span></li>)}</ul>
+        </>}
+      </section>}
       {students.length > 0 && !rowsLoading && recent.length > 0 && <section className="habit-recap" aria-labelledby="habit-recap-title">
         <h2 id="habit-recap-title">Rekap {recent.length} catatan terakhir</h2>
         <p className="help">Dihitung dari catatan terbaru yang termuat. Catatan yang belum ditandai tidak dianggap gagal. Rekap ini untuk melihat perkembangan anak, bukan peringkat atau perbandingan antarmurid.</p>
