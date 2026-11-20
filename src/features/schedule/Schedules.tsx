@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../lib/auth-context'
 import { supabase } from '../../lib/supabase'
 import { canReadAnnouncements } from '../../lib/announcements'
 import { ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { ScheduleProposals } from './ScheduleProposals'
 import { ScheduleHistory } from './ScheduleHistory'
 
@@ -32,12 +33,13 @@ function Workspace({ userId }: { userId: string }) {
   const [page, setPage] = useState(0)
   const [history, setHistory] = useState<string | null>(null)
   const [classId, setClassId] = useState('')
+  const [referencesTruncated, setReferencesTruncated] = useState(false)
   const [classes, setClasses] = useState<ClassOption[]>([])
   useEffect(() => {
     const client = supabase
     if (!client) { setLoading(false); return }
     const controller = new AbortController()
-    setLoading(true); setFailed(false); setRows([]); setHistory(null)
+    setLoading(true); setFailed(false); setRows([]); setHistory(null); setReferencesTruncated(false)
     void (async () => {
       try {
         const profile = await client.from('profiles').select('role').eq('id', userId).abortSignal(controller.signal).maybeSingle()
@@ -56,12 +58,17 @@ function Workspace({ userId }: { userId: string }) {
           query.range(page * 25, page * 25 + 25).abortSignal(controller.signal),
           nextRole === 'administrator' ? client.from('teacher_assignments').select('id,teachers!inner(name),school_classes!inner(name),subjects!inner(name)')
             .eq('is_active', true).eq('teachers.is_active', true).eq('school_classes.is_active', true).eq('subjects.is_active', true)
-            .limit(1000).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
+            .limit(1001).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
           client.from('school_classes').select('id,name,academic_years!inner(name)').order('name').order('id')
-            .limit(1000).abortSignal(controller.signal).overrideTypes<ClassOption[], { merge: false }>(),
+            .limit(1001).abortSignal(controller.signal).overrideTypes<ClassOption[], { merge: false }>(),
         ])
-        if (list.error || options?.error || options?.data?.length === 1000 || classOptions.error || classOptions.data.length === 1000) throw new Error('Unavailable')
-        if (!controller.signal.aborted) { setRows(list.data as Schedule[]); setAssignments(options?.data ?? []); setClasses(classOptions.data) }
+        if (list.error || options?.error || classOptions.error) throw new Error('Unavailable')
+        if (!controller.signal.aborted) {
+          setRows(list.data as Schedule[])
+          setAssignments(options?.data?.slice(0, 1000) ?? [])
+          setClasses(classOptions.data.slice(0, 1000))
+          setReferencesTruncated((options?.data?.length ?? 0) > 1000 || classOptions.data.length > 1000)
+        }
       } catch { if (!controller.signal.aborted) setFailed(true) }
       finally { if (!controller.signal.aborted) setLoading(false) }
     })()
@@ -98,6 +105,7 @@ function Workspace({ userId }: { userId: string }) {
       <fieldset disabled={busy}><label>Tanggal jadwal<input type="date" value={date} onChange={event => { setDate(event.target.value); setPage(0); setEditing(null) }} /></label>
         <label>Kelas jadwal<select value={classId} onChange={event => { setClassId(event.target.value); setPage(0); setEditing(null); setError('') }}><option value="">Semua kelas yang dapat diakses</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name} · {item.academic_years.name}</option>)}</select></label>
         <p>Daftar kelas berasal dari data sekolah. Jadwal yang terlihat tetap mengikuti hak akses akun. Filter kelas hanya berlaku pada daftar jadwal; usulan memiliki filter status tersendiri.</p>
+        <ReferenceNotice truncated={referencesTruncated}/>
         {['administrator', 'principal'].includes(role) && <label><input type="checkbox" checked={all} onChange={event => { setAll(event.target.checked); setPage(0); setEditing(null) }} /> Semua jadwal (pengelolaan)</label>}
         <button type="button" onClick={reload}>Muat ulang</button>
         {role === 'administrator' && <button type="button" onClick={() => { setEditing('new'); setError('') }}>Tambah jadwal</button>}

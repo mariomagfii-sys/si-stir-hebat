@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../lib/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { supabase } from '../../lib/supabase'
 import { schoolToday } from '../attendance/attendance-model'
 import { SupervisionReport } from './SupervisionReport'
@@ -50,6 +51,7 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false)
   const [evidenceBusy, setEvidenceBusy] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [teachersTruncated, setTeachersTruncated] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -67,6 +69,7 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(false)
+    setTeachersTruncated(false)
     const load = async () => {
       try {
         const profile = await client.from('profiles').select('role').eq('id', userId)
@@ -80,12 +83,13 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
           client.from('academic_supervisions').select(columns).order('updated_at', { ascending: false }).order('id')
             .range(page * 20, page * 20 + 20).abortSignal(controller.signal).overrideTypes<Session[], { merge: false }>(),
           nextRole === 'principal' ? client.from('teachers').select('id,name').eq('is_active', true)
-            .order('name').order('id').limit(1000).abortSignal(controller.signal) : null,
+            .order('name').order('id').limit(1001).abortSignal(controller.signal) : null,
         ])
-        if (sessions.error || options?.error || options?.data?.length === 1000) throw new Error('Unable to load supervision')
+        if (sessions.error || options?.error) throw new Error('Unable to load supervision')
         if (!controller.signal.aborted) {
           setRows(sessions.data ?? [])
-          setTeachers(options?.data ?? [])
+          setTeachers(options?.data?.slice(0, 1000) ?? [])
+          setTeachersTruncated((options?.data?.length ?? 0) > 1000)
         }
       } catch {
         if (!controller.signal.aborted) setLoadError(true)
@@ -181,6 +185,7 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
         {message && !hasPendingObservation && <p role="status">{message}</p>}
         {error && <p role="alert" className="error">{error}</p>}
         {principal && <details><summary>Laporan supervisi</summary><SupervisionReport key={attempt} /></details>}
+        {principal && <ReferenceNotice truncated={teachersTruncated}/>}
         {principal && !draftId && <button className="button" type="button" disabled={!teachers.length || navigationLocked}
           onClick={() => { setSelected(null); setDraftId(crypto.randomUUID()); setError(''); setMessage('') }}>Jadwalkan supervisi</button>}
         {principal && !teachers.length && <p>Belum ada guru aktif untuk dijadwalkan.</p>}

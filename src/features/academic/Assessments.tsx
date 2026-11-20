@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../lib/auth-context'
 import { supabase } from '../../lib/supabase'
 import { ErrorNotice, LoadingState, EmptyState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { assessmentFields, assessmentTypes, parseScore, type Assessment } from './assessment-model'
 import { AssessmentDetail } from './AssessmentDetail'
 import { AcademicReport } from './AcademicReport'
@@ -26,6 +27,7 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [attempt, setAttempt] = useState(0)
+  const [optionsTruncated, setOptionsTruncated] = useState(false)
 
   useEffect(() => {
     const client = supabase
@@ -33,6 +35,7 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(false)
+    setOptionsTruncated(false)
     void (async () => {
       try {
         const profile = await client.from('profiles').select('role').eq('id', userId).abortSignal(controller.signal).maybeSingle()
@@ -46,12 +49,13 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
             .range(page * 20, page * 20 + 20).abortSignal(controller.signal),
           nextRole === 'teacher' ? client.from('teacher_assignments').select('id,school_classes!inner(name),subjects!inner(name)')
             .eq('is_active', true).eq('school_classes.is_active', true).eq('subjects.is_active', true)
-            .limit(1000).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
+            .limit(1001).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
         ])
-        if (list.error || options?.error || options?.data?.length === 1000) throw new Error('Assessment unavailable')
+        if (list.error || options?.error) throw new Error('Assessment unavailable')
         if (!controller.signal.aborted) {
           setRows(list.data as Assessment[])
-          setAssignments(options?.data ?? [])
+          setAssignments(options?.data?.slice(0, 1000) ?? [])
+          setOptionsTruncated((options?.data?.length ?? 0) > 1000)
         }
       } catch {
         if (!controller.signal.aborted) setLoadError(true)
@@ -94,6 +98,7 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
     {loading ? <LoadingState /> : loadError ? <ErrorNotice onRetry={reload}>Asesmen gagal dimuat.</ErrorNotice>
       : !roles.includes(role) ? <EmptyState>Akun ini belum memiliki akses asesmen.</EmptyState> : <>
         <details><summary>Rekap dan perkembangan akademik</summary><AcademicReport role={role} /></details>
+        {role === 'teacher' && <ReferenceNotice truncated={optionsTruncated}/>}
         {error && <ErrorNotice onRetry={reload}>{error}</ErrorNotice>}
         {role === 'teacher' && !creating && <button className="button" type="button" disabled={!assignments.length}
           onClick={() => setCreating(crypto.randomUUID())}>Buat asesmen</button>}

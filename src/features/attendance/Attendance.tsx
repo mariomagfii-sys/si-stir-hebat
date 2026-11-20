@@ -1,9 +1,10 @@
 import { canReadAttendance } from '../../lib/school'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../lib/auth-context'
 import { supabase } from '../../lib/supabase'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { createCsv, downloadCsv } from '../../utils/csv'
 import { attendanceLabels, attendanceSummary, prepareAttendanceChanges, schoolToday, type AttendanceChange, type AttendanceDraft, type AttendanceRecord } from './attendance-model'
 import { AttendanceImport } from './AttendanceImport'
@@ -43,6 +44,8 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
   const [confirmChanges, setConfirmChanges] = useState<AttendanceChange[] | null>(null)
   const [newClass, setNewClass] = useState('')
   const [confirmCreate, setConfirmCreate] = useState(false)
+  const [referencesTruncated, setReferencesTruncated] = useState(false)
+  const [historyTruncated, setHistoryTruncated] = useState(false)
   const allowed = canReadAttendance(role)
   const current = sessions.find(item => item.id === selected)
   const canWrite = role === 'teacher' && Boolean(current && allowedClasses.includes(current.class_id))
@@ -53,6 +56,7 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
     setLoading(true)
     setError('')
     setAllowedClasses([])
+    setReferencesTruncated(false)
     async function load() {
       try {
         if (!supabase) throw new Error('configuration')
@@ -65,12 +69,13 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
         if (!['administrator', 'principal', 'teacher', 'student'].includes(nextRole ?? '')) return
         const [sessionResult, classResult, yearResult] = await Promise.all([
           client.from('attendance_sessions').select('id,class_id,held_on').order('held_on', { ascending: false }).order('created_at', { ascending: false }).order('id').range(page * pageSize, page * pageSize + pageSize),
-          client.from('school_classes').select('id,name,academic_year_id,is_active').order('name').limit(1000),
-          client.from('academic_years').select('id,name').limit(200),
+          client.from('school_classes').select('id,name,academic_year_id,is_active').order('name').limit(1001),
+          client.from('academic_years').select('id,name').limit(201),
         ])
         for (const result of [sessionResult,classResult,yearResult]) if (result.error) throw result.error
         if (!active) return
         setClasses(classResult.data ?? [])
+        setReferencesTruncated((classResult.data?.length ?? 0) > 1000 || (yearResult.data?.length ?? 0) > 200)
         setYears(Object.fromEntries((yearResult.data ?? []).map(year => [year.id,year.name])))
         const sessionRows = (sessionResult.data ?? []).slice(0,pageSize)
         setSessions(sessionRows)
@@ -79,11 +84,14 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
         if (nextRole === 'teacher') {
           const [teacher,assignments,subjects] = await Promise.all([
             client.from('teachers').select('id').eq('profile_id',userId).eq('is_active',true).maybeSingle(),
-            client.from('teacher_assignments').select('teacher_id,class_id,subject_id').eq('is_active',true).limit(1000),
-            client.from('subjects').select('id').eq('is_active',true).limit(1000),
+            client.from('teacher_assignments').select('teacher_id,class_id,subject_id').eq('is_active',true).limit(1001),
+            client.from('subjects').select('id').eq('is_active',true).limit(1001),
           ])
           for (const result of [teacher,assignments,subjects]) if (result.error) throw result.error
-          if (active) setAllowedClasses([...new Set((assignments.data ?? []).filter(item => item.teacher_id === teacher.data?.id && subjects.data?.some(subject => subject.id === item.subject_id)).map(item => item.class_id))])
+          if (active) {
+            if ((assignments.data?.length ?? 0) > 1000 || (subjects.data?.length ?? 0) > 1000) setReferencesTruncated(true)
+            setAllowedClasses([...new Set((assignments.data ?? []).filter(item => item.teacher_id === teacher.data?.id && subjects.data?.some(subject => subject.id === item.subject_id)).map(item => item.class_id))])
+          }
         }
       } catch (failure) {
         if (active) setError(typeof failure === 'object' && failure && 'code' in failure && failure.code === 'PGRST205' ? 'Layanan absensi sedang disiapkan. Hubungi pengelola aplikasi.' : 'Absensi belum dapat dimuat. Periksa koneksi atau coba lagi.')
@@ -95,7 +103,7 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
 
   useEffect(() => {
     let active = true
-    setRecords([]); setHistory([]); setDraft({}); setRecordsError(''); setSaveError(''); setConfirmChanges(null)
+    setRecords([]); setHistory([]); setDraft({}); setRecordsError(''); setSaveError(''); setConfirmChanges(null); setHistoryTruncated(false)
     if (!selected) return
     setRecordsLoading(true)
     async function load() {
@@ -109,9 +117,12 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
         setRecords(data)
         setDraft(Object.fromEntries(data.map(record => [record.id,{ status: record.status ?? '', reason: '' }])))
         if (role !== 'student' && data.length) {
-          const audit = await supabase.from('attendance_changes').select('id,record_id,old_status,new_status,reason,created_at').in('record_id',data.map(record => record.id)).order('created_at',{ ascending: false }).limit(200)
+          const audit = await supabase.from('attendance_changes').select('id,record_id,old_status,new_status,reason,created_at').in('record_id',data.map(record => record.id)).order('created_at',{ ascending: false }).limit(201)
           if (audit.error) throw audit.error
-          if (active) setHistory((audit.data ?? []) as History[])
+          if (active) {
+            setHistory(((audit.data ?? []) as History[]).slice(0, 200))
+            setHistoryTruncated((audit.data?.length ?? 0) > 200)
+          }
         }
       } catch { if (active) setRecordsError('Daftar hadir atau riwayat belum dapat dimuat. Silakan coba lagi.') }
       finally { if (active) setRecordsLoading(false) }
@@ -167,6 +178,7 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
 
   return <section className="board attendance"><div className="board-heading"><div><div className="eyebrow">KEHADIRAN SEKOLAH</div><h1>Absensi</h1><p>Sesi harian kelas dan catatan kehadiran yang dapat Anda akses.</p></div><Link to="/dashboard">Dashboard</Link></div>
     {message && <p className="status" role="status">{message}</p>}
+    <ReferenceNotice truncated={referencesTruncated}/>
     {saveError && <ErrorNotice>{saveError}</ErrorNotice>}
     {loading ? <LoadingState/> : error ? <ErrorNotice onRetry={() => setAttempt(value => value+1)}>{error}</ErrorNotice> : !allowed ? <EmptyState>Anda belum memiliki akses absensi. Akses orang tua menunggu relasi wali yang terverifikasi.</EmptyState> : <>
       <AttendanceReport classes={classes.map(item=>({id:item.id,label:classLabel(item.id)}))}/>
@@ -179,10 +191,10 @@ function AttendanceWorkspace({ userId }: { userId: string }) {
         {recordsLoading ? <LoadingState>Memuat daftar hadir…</LoadingState> : recordsError ? <ErrorNotice onRetry={()=>setRecordsAttempt(value=>value+1)}>{recordsError}</ErrorNotice> : !records.length ? <EmptyState>Tidak ada catatan yang dapat ditampilkan untuk akun Anda.</EmptyState> : <>
           <h2>Rekap data yang dapat Anda akses</h2><div className="attendance-summary">{Object.entries(attendanceLabels).map(([key,label])=><span key={key}>{label}: <strong>{summary[key as keyof typeof attendanceLabels]}</strong></span>)}<span>Belum diisi: <strong>{summary.unmarked}</strong></span></div>
           <div className="actions"><button className="refresh-button" onClick={exportRecords} disabled={saving}>Ekspor data tersimpan (CSV)</button><button className="refresh-button" disabled={saving} onClick={()=>{ if(discardChanges()) setRecordsAttempt(value=>value+1) }}>Muat ulang absensi</button></div>
-          <div className="table-scroll"><table><caption>Daftar hadir {current?.held_on}</caption><thead><tr><th scope="col">Kode</th><th scope="col">Nama siswa</th><th scope="col">Status</th>{canWrite && <th scope="col">Alasan koreksi</th>}</tr></thead><tbody>{records.map(record=><tr key={record.id}><td>{record.student_code}</td><td>{record.student_name}</td><td>{canWrite ? <><label className="sr-only" htmlFor={`status-${record.id}`}>Status {record.student_name}</label><select id={`status-${record.id}`} disabled={saving || Boolean(confirmChanges)} value={draft[record.id]?.status ?? ''} onChange={event=>setDraft({...draft,[record.id]:{...draft[record.id],status:event.target.value}})}><option value="" disabled={record.status!==null}>Belum diisi</option>{Object.entries(attendanceLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></> : record.status ? attendanceLabels[record.status] : 'Belum diisi'}</td>{canWrite && <td>{record.status!==null && draft[record.id]?.status!==record.status ? <><label className="sr-only" htmlFor={`reason-${record.id}`}>Alasan koreksi {record.student_name}</label><input id={`reason-${record.id}`} minLength={5} maxLength={300} disabled={saving || Boolean(confirmChanges)} value={draft[record.id]?.reason ?? ''} onChange={event=>setDraft({...draft,[record.id]:{...draft[record.id],reason:event.target.value}})}/></> : '—'}</td>}</tr>)}</tbody></table></div>
+          <div className="table-scroll" role="region" aria-label="Tabel daftar hadir yang dapat digeser" tabIndex={0}><table><caption>Daftar hadir {current?.held_on}</caption><thead><tr><th scope="col">Kode</th><th scope="col">Nama siswa</th><th scope="col">Status</th>{canWrite && <th scope="col">Alasan koreksi</th>}</tr></thead><tbody>{records.map(record=><tr key={record.id}><td>{record.student_code}</td><td>{record.student_name}</td><td>{canWrite ? <><label className="sr-only" htmlFor={`status-${record.id}`}>Status {record.student_name}</label><select id={`status-${record.id}`} disabled={saving || Boolean(confirmChanges)} value={draft[record.id]?.status ?? ''} onChange={event=>setDraft({...draft,[record.id]:{...draft[record.id],status:event.target.value}})}><option value="" disabled={record.status!==null}>Belum diisi</option>{Object.entries(attendanceLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></> : record.status ? attendanceLabels[record.status] : 'Belum diisi'}</td>{canWrite && <td>{record.status!==null && draft[record.id]?.status!==record.status ? <><label className="sr-only" htmlFor={`reason-${record.id}`}>Alasan koreksi {record.student_name}</label><input id={`reason-${record.id}`} minLength={5} maxLength={300} disabled={saving || Boolean(confirmChanges)} value={draft[record.id]?.reason ?? ''} onChange={event=>setDraft({...draft,[record.id]:{...draft[record.id],reason:event.target.value}})}/></> : '-'}</td>}</tr>)}</tbody></table></div>
           {canWrite && (confirmChanges ? <div className="confirm-panel" role="alertdialog" aria-modal="false" aria-labelledby="save-attendance"><h3 id="save-attendance">Simpan {confirmChanges.length} perubahan?</h3><p>Perubahan dan pelakunya akan tercatat. Jika satu catatan gagal, seluruh perubahan ini tidak disimpan.</p><div className="actions"><button className="button" disabled={saving} onClick={()=>void save()}>{saving ? 'Menyimpan…' : 'Ya, simpan absensi'}</button><button className="button secondary" disabled={saving} onClick={()=>setConfirmChanges(null)}>Batal</button></div></div> : <button className="button" disabled={saving || !dirty} onClick={askSave}>Simpan absensi</button>)}
           {role!=='student' && current && <AttendanceImport key={`${selected}:${recordsAttempt}`} sessionId={selected} sessionLabel={`${current.held_on} · ${classLabel(current.class_id)}`} sessionDate={current.held_on} records={records} canWrite={canWrite} hasDraftChanges={dirty} busy={saving} onBusyChange={setSaving} onImported={count=>{setMessage(`${count} catatan kehadiran berhasil diimpor.`);setRecordsAttempt(value=>value+1)}}/>}
-          {role!=='student' && <section><h2>Riwayat pencatatan dan koreksi</h2><p className="help">Menampilkan paling banyak 200 perubahan terbaru. Pelaku dan waktu dicatat otomatis.</p>{!history.length ? <EmptyState>Belum ada riwayat pencatatan.</EmptyState> : <ul className="attendance-history">{history.map(item=><li key={item.id}><strong>{records.find(record=>record.id===item.record_id)?.student_name ?? 'Siswa'}</strong><span>{item.old_status ? attendanceLabels[item.old_status] : 'Belum diisi'} → {attendanceLabels[item.new_status]}</span><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})}</time>{item.reason && <p>{item.reason}</p>}</li>)}</ul>}</section>}
+          {role!=='student' && <section><h2>Riwayat pencatatan dan koreksi</h2><p className="help">Menampilkan paling banyak 200 perubahan terbaru. Pelaku dan waktu dicatat otomatis.</p>{historyTruncated && <p className="status" role="status">Riwayat dipotong pada 200 perubahan terbaru; perubahan yang lebih lama tidak dimuat di sini.</p>}{!history.length ? <EmptyState>Belum ada riwayat pencatatan.</EmptyState> : <ul className="attendance-history">{history.map(item=><li key={item.id}><strong>{records.find(record=>record.id===item.record_id)?.student_name ?? 'Siswa'}</strong><span>{item.old_status ? attendanceLabels[item.old_status] : 'Belum diisi'} → {attendanceLabels[item.new_status]}</span><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})}</time>{item.reason && <p>{item.reason}</p>}</li>)}</ul>}</section>}
         </>}
       </>}
     </>}

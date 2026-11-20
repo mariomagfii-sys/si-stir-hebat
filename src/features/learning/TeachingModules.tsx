@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../lib/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { canReadJournals } from '../../lib/school'
 import { supabase } from '../../lib/supabase'
 
@@ -36,6 +37,7 @@ function ModuleWorkspace({ userId }: { userId: string }) {
   const [message, setMessage] = useState('')
   const [page, setPage] = useState(0)
   const [attempt, setAttempt] = useState(0)
+  const [optionsTruncated, setOptionsTruncated] = useState(false)
   const current = modules.find(row => row.id === selected)
 
   useEffect(() => {
@@ -44,6 +46,7 @@ function ModuleWorkspace({ userId }: { userId: string }) {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(false)
+    setOptionsTruncated(false)
     const load = async () => {
       try {
         const profile = await client.from('profiles').select('role').eq('id', userId).abortSignal(controller.signal).maybeSingle()
@@ -57,12 +60,13 @@ function ModuleWorkspace({ userId }: { userId: string }) {
             .range(page * pageSize, page * pageSize + pageSize).abortSignal(controller.signal).overrideTypes<Module[], { merge: false }>(),
           nextRole === 'teacher' ? client.from('teacher_assignments').select('id,school_classes!inner(name),subjects!inner(name)')
             .eq('is_active', true).eq('school_classes.is_active', true).eq('subjects.is_active', true)
-            .limit(1000).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
+            .limit(1001).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
         ])
-        if (records.error || options?.error || options?.data?.length === 1000) throw new Error('Module list unavailable')
+        if (records.error || options?.error) throw new Error('Module list unavailable')
         if (!controller.signal.aborted) {
           setModules(records.data ?? [])
-          setAssignments(options?.data ?? [])
+          setAssignments(options?.data?.slice(0, 1000) ?? [])
+          setOptionsTruncated((options?.data?.length ?? 0) > 1000)
         }
       } catch {
         if (!controller.signal.aborted) setLoadError(true)
@@ -136,6 +140,7 @@ function ModuleWorkspace({ userId }: { userId: string }) {
       : <>
         {message && <p role="status">{message}</p>}
         {error && <ErrorNotice onRetry={() => { setError(''); setEditor(null); setSelected(null); reload() }}>{error}</ErrorNotice>}
+        {role === 'teacher' && <ReferenceNotice truncated={optionsTruncated}/>}
         {role === 'teacher' && !editor && <button className="button" type="button" disabled={!assignments.length || busy}
           onClick={() => { setSelected(null); setEditor({ id: crypto.randomUUID(), assignmentId: '', title: '', objectives: '', activities: '' }) }}>Buat modul</button>}
         {role === 'teacher' && !assignments.length && <p>Belum ada penugasan aktif untuk membuat modul.</p>}

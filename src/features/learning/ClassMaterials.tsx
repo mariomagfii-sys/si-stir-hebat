@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../lib/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { supabase } from '../../lib/supabase'
 import { TaskSubmissions } from './TaskSubmissions'
 import { TaskFeedback } from './TaskFeedback'
@@ -37,6 +38,7 @@ function MaterialWorkspace({ userId, kind }: { userId: string; kind: Kind }) {
   const [message, setMessage] = useState('')
   const [page, setPage] = useState(0)
   const [attempt, setAttempt] = useState(0)
+  const [optionsTruncated, setOptionsTruncated] = useState(false)
   const [openTask, setOpenTask] = useState<string | null>(null)
 
   useEffect(() => {
@@ -45,6 +47,7 @@ function MaterialWorkspace({ userId, kind }: { userId: string; kind: Kind }) {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(false)
+    setOptionsTruncated(false)
     const load = async () => {
       try {
         const profile = await client.from('profiles').select('role').eq('id', userId).abortSignal(controller.signal).maybeSingle()
@@ -59,12 +62,13 @@ function MaterialWorkspace({ userId, kind }: { userId: string; kind: Kind }) {
             .abortSignal(controller.signal).overrideTypes<Material[], { merge: false }>(),
           nextRole === 'teacher' ? client.from('teacher_assignments').select('id,school_classes!inner(name),subjects!inner(name)')
             .eq('is_active', true).eq('school_classes.is_active', true).eq('subjects.is_active', true)
-            .limit(1000).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
+            .limit(1001).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
         ])
-        if (materials.error || options?.error || options?.data?.length === 1000) throw new Error('Materials unavailable')
+        if (materials.error || options?.error) throw new Error('Materials unavailable')
         if (!controller.signal.aborted) {
           setRows(materials.data ?? [])
-          setAssignments(options?.data ?? [])
+          setAssignments(options?.data?.slice(0, 1000) ?? [])
+          setOptionsTruncated((options?.data?.length ?? 0) > 1000)
         }
       } catch {
         if (!controller.signal.aborted) setLoadError(true)
@@ -138,6 +142,7 @@ function MaterialWorkspace({ userId, kind }: { userId: string; kind: Kind }) {
       : !roles.includes(role) ? <EmptyState>Akun ini belum memiliki akses ke {itemLabel} kelas.</EmptyState> : <>
         {message && <p role="status">{message}</p>}
         {error && <ErrorNotice onRetry={() => { setError(''); setEditing(null); setConfirm(null); reload() }}>{error}</ErrorNotice>}
+        {role === 'teacher' && <ReferenceNotice truncated={optionsTruncated}/>}
         {role === 'teacher' && !editing && !confirm && <button className="button" type="button"
           disabled={!assignments.length} onClick={() => { setDraftId(crypto.randomUUID()); setEditing('new'); setMessage(''); setError('') }}>
           Buat {itemLabel}

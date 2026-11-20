@@ -1095,7 +1095,7 @@ for (const { role, attendance, journals } of [
   })
 }
 
-async function mockAssessments(page: Page, { role = 'teacher', empty = false, conflict = false } = {}) {
+async function mockAssessments(page: Page, { role = 'teacher', empty = false, conflict = false, overflow = false } = {}) {
   await mockSchool(page, { role })
   const assessment = {
     id: 'assessment-example', title: 'Data Contoh Asesmen', assessment_type: 'formative', held_on: schoolToday(),
@@ -1105,7 +1105,9 @@ async function mockAssessments(page: Page, { role = 'teacher', empty = false, co
   const result = { id: 'result-example', student_name: 'Data Contoh Siswa', student_code: 'CONTOH01', score: role === 'teacher' ? null as number | null : 10, feedback: '', revision: 0 }
   const history: Record<string, unknown>[] = []
   let created = !empty
-  await page.route('**/rest/v1/teacher_assignments?*', route => route.fulfill({ json: [{ id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' } }] }))
+  await page.route('**/rest/v1/teacher_assignments?*', route => route.fulfill({ json: overflow
+    ? Array.from({ length: 1001 }, (_, index) => ({ id: `assignment-${index}`, school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' } }))
+    : [{ id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' } }] }))
   await page.route('**/rest/v1/assessments?*', route => {
     const request = route.request()
     if (request.method() === 'POST') {
@@ -1294,6 +1296,15 @@ test('teacher creates an assessment, grades zero, publishes and corrects with hi
   await page.getByRole('button', { name: 'Riwayat nilai', exact: true }).click()
   await expect(page.getByText('0 → 1.5', { exact: true })).toBeVisible()
   await expect(page.getByText('Alasan: Data Contoh hasil pemeriksaan ulang', { exact: true })).toBeVisible()
+})
+
+test('truncated assignment options are announced instead of silently dropped', async ({ page }) => {
+  await mockAssessments(page, { overflow: true })
+  await page.goto('/asesmen')
+  await expect(page.getByRole('status').filter({ hasText: 'Sebagian daftar referensi dipotong' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buat asesmen' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Buat asesmen' }).click()
+  await expect(page.getByRole('combobox', { name: 'Penugasan', exact: true }).locator('option')).toHaveCount(1001)
 })
 
 test('assessment revision conflict preserves the form until the latest result is loaded', async ({ page }) => {
