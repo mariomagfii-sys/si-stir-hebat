@@ -16,6 +16,15 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://fonts.gstatic.com/**', route => route.abort())
 })
 
+async function clickNavLink(page: Page, name: string) {
+  const link = page.getByRole('link', { name, exact: true })
+  if (!(await link.isVisible().catch(() => false))) {
+    const toggle = page.getByRole('button', { name: 'Lainnya', exact: true })
+    if (await toggle.count()) await toggle.click()
+  }
+  await link.click()
+}
+
 async function mockSchool(page: Page, { role = 'administrator', signedIn = true, failNews = false, many = false, masterUnavailable = false, relationsReady = false } = {}) {
   let profile = { id: userId, full_name: 'Pengguna Uji', role }
   const news = [{ id: '20000000-0000-4000-8000-000000000001', title: 'Kegiatan literasi', body: 'Mari membaca bersama di sekolah.', status: 'published', created_at: '2026-11-10T00:00:00Z' }]
@@ -33,11 +42,11 @@ async function mockSchool(page: Page, { role = 'administrator', signedIn = true,
   }
   if (signedIn) await page.addInitScript(({ session }) => {
     if (!sessionStorage.getItem('fixture-initialized')) {
-      localStorage.setItem('sb-example-auth-token', JSON.stringify(session))
+      localStorage.setItem('sb-school-abc-auth-token', JSON.stringify(session))
       sessionStorage.setItem('fixture-initialized', 'true')
     }
   }, { session })
-  await page.route('https://example.supabase.co/**', async route => {
+  await page.route('https://school-abc.supabase.co/**', async route => {
     const request = route.request()
     const url = new URL(request.url())
     const method = request.method()
@@ -101,6 +110,12 @@ async function mockSchool(page: Page, { role = 'administrator', signedIn = true,
 test('administrator reviews a verified guardian link before saving', async ({ page }) => {
   await mockSchool(page)
   const registryId = '20000000-0000-4000-8000-000000000010'
+  const accountId = '20000000-0000-4000-8000-000000000099'
+  await page.route('**/rest/v1/profiles?*', route => {
+    const target = new URL(route.request().url()).searchParams.get('id')
+    if (target === `eq.${accountId}`) return route.fulfill({ json: [{ role: 'parent' }] })
+    return route.fallback()
+  })
   await page.route('**/rest/v1/students?*', route => route.fulfill({
     json: [{ id: registryId, name: 'Data Contoh Siswa', is_active: true }],
   }))
@@ -109,15 +124,15 @@ test('administrator reviews a verified guardian link before saving', async ({ pa
     writes++
     expect(route.request().postDataJSON()).toEqual({
       relationship_kind: 'parent', registry_id: registryId,
-      profile_id: userId, active: true, reason: 'Verifikasi data contoh',
+      profile_id: accountId, active: true, reason: 'Verifikasi data contoh',
     })
     return route.fulfill({ json: true })
   })
   await page.goto('/')
-  await page.getByRole('link', { name: 'Tautan akun' }).click()
+  await clickNavLink(page, 'Tautan akun')
   await page.getByLabel('Jenis tautan').selectOption('parent')
   await page.getByLabel('Kode siswa').fill('SISWA_01')
-  await page.getByLabel('ID akun').fill(userId)
+  await page.getByLabel('ID akun').fill(accountId)
   await page.getByLabel('Alasan verifikasi atau pencabutan').fill('Verifikasi data contoh')
   await page.getByRole('button', { name: 'Tinjau tautan' }).click()
   await expect(page.getByRole('alertdialog')).toContainText('Data Contoh Siswa')
@@ -125,6 +140,21 @@ test('administrator reviews a verified guardian link before saving', async ({ pa
   await page.getByRole('button', { name: 'Ya, simpan' }).click()
   await expect(page.getByRole('status')).toHaveText('Perubahan tersimpan dan tercatat.')
   expect(writes).toBe(1)
+})
+
+test('administrator is blocked from linking a parent account to a non-parent profile', async ({ page }) => {
+  await mockSchool(page)
+  await page.route('**/rest/v1/students?*', route => route.fulfill({
+    json: [{ id: '20000000-0000-4000-8000-000000000011', name: 'Data Contoh Siswa', is_active: true }],
+  }))
+  await page.goto('/')
+  await clickNavLink(page, 'Tautan akun')
+  await page.getByLabel('Jenis tautan').selectOption('parent')
+  await page.getByLabel('Kode siswa').fill('SISWA_01')
+  await page.getByLabel('ID akun').fill(userId)
+  await page.getByLabel('Alasan verifikasi atau pencabutan').fill('Verifikasi data contoh')
+  await page.getByRole('button', { name: 'Tinjau tautan' }).click()
+  await expect(page.getByRole('alert')).toContainText('wali siswa')
 })
 
 test('guardian portal renders attendance and clears it when the link is revoked', async ({ page }) => {
@@ -140,7 +170,7 @@ test('guardian portal renders attendance and clears it when the link is revoked'
     }] : [],
   }))
   await page.goto('/')
-  await page.getByRole('link', { name: 'Ruang Orang Tua', exact: true }).click()
+  await clickNavLink(page, 'Ruang Orang Tua')
   await expect(page.getByRole('heading', { name: 'Data Contoh Anak' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Hadir', exact: true })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Belum diisi' })).toBeVisible()
@@ -274,7 +304,7 @@ test('student sees the task deadline without authoring controls', async ({ page 
     }] })
   })
   await page.goto('/')
-  await page.getByRole('link', { name: 'Tugas Kelas' }).click()
+  await clickNavLink(page, 'Tugas Kelas')
   await expect(page.getByRole('heading', { name: 'Data Contoh Tugas' })).toBeVisible()
   await expect(page.getByText('Tenggat 2026-11-20')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Buat tugas' })).toHaveCount(0)
@@ -356,7 +386,7 @@ test('login failure can be retried, session survives reload, and logout protects
   await page.getByLabel('Email', { exact: true }).fill(user.email)
   await page.getByLabel('Kata sandi', { exact: true }).fill('wrong-password')
   await page.getByRole('button', { name: 'Masuk', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Tidak dapat masuk')
+  await expect(page.getByRole('alert').filter({ hasText: 'Tidak dapat masuk' })).toBeVisible()
   await page.getByLabel('Kata sandi', { exact: true }).fill('valid-password')
   await page.getByRole('button', { name: 'Masuk', exact: true }).click()
   await expect(page).toHaveURL(/\/dashboard$/)
@@ -441,9 +471,9 @@ test('principal dashboard distinguishes missing counts from zero and retries', a
   })
   await page.goto('/dashboard')
   const summary = page.getByRole('region', { name: 'Ringkasan kepala sekolah' })
-  await expect(summary.getByRole('article', { name: 'Pra-observasi' })).toContainText('—')
+  await expect(summary.getByRole('article', { name: 'Pra-observasi' })).toContainText('N/A')
   await expect(summary.getByRole('article', { name: 'Pasca-observasi' })).toContainText('0')
-  await expect(summary.getByRole('alert')).toContainText('belum dapat dimuat')
+  await expect(summary.getByRole('alert').filter({ hasText: 'belum dapat dimuat' })).toBeVisible()
   retry = true
   await summary.getByRole('button', { name: 'Muat ulang ringkasan kepala sekolah' }).click()
   await expect(summary.getByRole('article', { name: 'Pra-observasi' })).toContainText('2')
@@ -480,7 +510,7 @@ test('manager publishes plain text announcement', async ({ page }) => {
 test('news network errors show a retry instead of a false empty feed', async ({ page }) => {
   await mockSchool(page, { failNews: true })
   await page.goto('/dashboard')
-  await expect(page.getByRole('alert').filter({ hasText: 'Sebagian informasi' })).toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('alert').filter({ hasText: 'Sebagian informasi pengumuman belum dapat dimuat.' })).toBeVisible({ timeout: 15000 })
   await expect(page.getByText('Belum ada pengumuman terbit.', { exact: false })).toHaveCount(0)
   await page.goto('/pengumuman')
   await expect(page.getByRole('button', { name: 'Coba lagi', exact: true })).toBeVisible({ timeout: 15000 })
@@ -519,7 +549,7 @@ test('recovery request and password confirmation work', async ({ page }) => {
   await page.getByLabel('Kata sandi baru', { exact: true }).fill('password-baru')
   await page.getByLabel('Konfirmasi kata sandi baru').fill('password-lain')
   await page.getByRole('button', { name: 'Simpan kata sandi' }).click()
-  await expect(page.getByRole('alert')).toContainText('Konfirmasi kata sandi belum sama')
+  await expect(page.getByRole('alert').filter({ hasText: 'Konfirmasi kata sandi belum sama' })).toBeVisible()
   await page.getByLabel('Konfirmasi kata sandi baru').fill('password-baru')
   await page.getByRole('button', { name: 'Simpan kata sandi' }).click()
   await expect(page.getByRole('status')).toContainText('Kata sandi berhasil diubah')
@@ -532,7 +562,7 @@ test('administrator validates and saves school master data', async ({ page }) =>
   await page.getByLabel(/Kode/).fill('lowercase')
   await page.getByLabel('Nama mata pelajaran').fill('Data Contoh Membaca')
   await page.getByRole('button', { name: 'Simpan data' }).click()
-  await expect(page.getByRole('alert')).toContainText('Kode hanya boleh')
+  await expect(page.getByRole('alert').filter({ hasText: 'Kode hanya boleh' })).toBeVisible()
   await page.getByLabel(/Kode/).fill('TEST')
   await page.getByRole('button', { name: 'Simpan data' }).click()
   await expect(page.getByRole('cell', { name: 'Data Contoh Membaca', exact: true })).toBeVisible()
@@ -581,7 +611,7 @@ test('pending users are denied master data and missing backend gives a useful er
 test('master data without migration shows preparation state', async ({ page }) => {
   await mockSchool(page, { masterUnavailable: true })
   await page.goto('/sekolah')
-  await expect(page.getByRole('alert')).toContainText('Layanan data sekolah sedang disiapkan')
+  await expect(page.getByRole('alert').filter({ hasText: 'Layanan data sekolah sedang disiapkan' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Coba lagi' })).toBeVisible()
 })
 
@@ -681,18 +711,18 @@ async function mockAttendance(page: Page, role='teacher', { hasSession=true, con
   const imports: Record<string,unknown>[]=[]
   const importRequestIds:string[]=[]
   let failImport=failImportResponse
-  await page.route('https://example.supabase.co/rest/v1/teacher_assignments**',route=>route.fulfill({json:[{id:'assignment-test',teacher_id:'teacher-test',class_id:'class-test',subject_id:'subject-test',is_active:true}]}))
-  await page.route('https://example.supabase.co/rest/v1/attendance_sessions**',route=>{
+  await page.route('https://school-abc.supabase.co/rest/v1/teacher_assignments**',route=>route.fulfill({json:[{id:'assignment-test',teacher_id:'teacher-test',class_id:'class-test',subject_id:'subject-test',is_active:true}]}))
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_sessions**',route=>{
     if(route.request().method()==='POST') {
       sessions.push({id:'attendance-session',class_id:'class-test',held_on:schoolToday()})
       return route.fulfill({json:{id:'attendance-session'}})
     }
     return route.fulfill({json:sessions})
   })
-  await page.route('https://example.supabase.co/rest/v1/attendance_records**',route=>route.fulfill({json:role==='student' ? records.slice(0,1) : records}))
-  await page.route('https://example.supabase.co/rest/v1/attendance_changes**',route=>route.fulfill({json:history}))
-  await page.route('https://example.supabase.co/rest/v1/attendance_imports**',route=>route.fulfill({json:imports}))
-  await page.route('https://example.supabase.co/rest/v1/rpc/import_attendance',route=>{
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_records**',route=>route.fulfill({json:role==='student' ? records.slice(0,1) : records}))
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_changes**',route=>route.fulfill({json:history}))
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_imports**',route=>route.fulfill({json:imports}))
+  await page.route('https://school-abc.supabase.co/rest/v1/rpc/import_attendance',route=>{
     const body=route.request().postDataJSON()
     importRequestIds.push(body.request_id)
     let imported=imports.find(item=>item.id===body.request_id)
@@ -707,7 +737,7 @@ async function mockAttendance(page: Page, role='teacher', { hasSession=true, con
     if(failImport) return route.fulfill({status:503,json:{message:'Response unavailable after commit'}})
     return route.fulfill({json:imported.changed_count})
   })
-  await page.route('https://example.supabase.co/rest/v1/rpc/record_attendance',route=>{
+  await page.route('https://school-abc.supabase.co/rest/v1/rpc/record_attendance',route=>{
     if(conflict) return route.fulfill({status:409,json:{code:'40001',message:'Concurrent update'}})
     const changes=route.request().postDataJSON().changes as {id:string;status:string;reason:string;revision:number}[]
     for(const change of changes) {
@@ -723,13 +753,13 @@ async function mockAttendance(page: Page, role='teacher', { hasSession=true, con
 test('attendance report loads over 1000 records with bounded session queries and exports totals',async({page})=>{
   await mockAttendance(page,'principal')
   const requests: URL[]=[]
-  await page.route('https://example.supabase.co/rest/v1/attendance_sessions**',route=>{
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_sessions**',route=>{
     const url=new URL(route.request().url())
     if(!url.searchParams.has('held_on')) return route.fulfill({json:[]})
     requests.push(url)
     return route.fulfill({json:Array.from({length:11},(_,i)=>({id:`report-${i}`,held_on:`2026-11-${String(i+1).padStart(2,'0')}`}))})
   })
-  await page.route('https://example.supabase.co/rest/v1/attendance_records**',route=>route.fulfill({json:Array.from({length:100},(_,i)=>({student_id:`pupil-${i}`,student_code:i===2?'002':`TEST_${i}`,student_name:i===2?'=Data Contoh':`Data Contoh ${i}`,status:i===0?null:'present'}))}))
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_records**',route=>route.fulfill({json:Array.from({length:100},(_,i)=>({student_id:`pupil-${i}`,student_code:i===2?'002':`TEST_${i}`,student_name:i===2?'=Data Contoh':`Data Contoh ${i}`,status:i===0?null:'present'}))}))
   await page.goto('/absensi')
   const report=page.getByRole('region',{name:'Rekap rentang tanggal'})
   await report.getByLabel('Kelas rekap').selectOption('class-test')
@@ -766,12 +796,12 @@ test('attendance report rejects long ranges and never exports a partial failed l
   await report.getByLabel('Tanggal awal rekap').fill('2026-10-01')
   await report.getByLabel('Tanggal akhir rekap').fill('2026-11-10')
   await report.getByRole('button',{name:'Tampilkan rekap'}).click()
-  await expect(report.getByRole('alert')).toContainText('maksimal 31 hari')
-  await page.route('https://example.supabase.co/rest/v1/attendance_sessions**',route=>new URL(route.request().url()).searchParams.has('held_on') ? route.fulfill({json:[{id:'report-ok',held_on:'2026-11-01'},{id:'report-denied',held_on:'2026-11-02'}]}) : route.fallback())
-  await page.route('https://example.supabase.co/rest/v1/attendance_records**',route=>new URL(route.request().url()).searchParams.get('session_id')==='eq.report-ok' ? route.fulfill({json:[{student_id:'test',student_code:'TEST',student_name:'Data Contoh',status:'present'}]}) : route.fulfill({status:403,json:{message:'Data Contoh izin dicabut'}}))
+  await expect(report.getByRole('alert').filter({ hasText: 'maksimal 31 hari' })).toBeVisible()
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_sessions**',route=>new URL(route.request().url()).searchParams.has('held_on') ? route.fulfill({json:[{id:'report-ok',held_on:'2026-11-01'},{id:'report-denied',held_on:'2026-11-02'}]}) : route.fallback())
+  await page.route('https://school-abc.supabase.co/rest/v1/attendance_records**',route=>new URL(route.request().url()).searchParams.get('session_id')==='eq.report-ok' ? route.fulfill({json:[{student_id:'test',student_code:'TEST',student_name:'Data Contoh',status:'present'}]}) : route.fulfill({status:403,json:{message:'Data Contoh izin dicabut'}}))
   await report.getByLabel('Tanggal awal rekap').fill('2026-11-01')
   await report.getByRole('button',{name:'Tampilkan rekap'}).click()
-  await expect(report.getByRole('alert')).toContainText('belum dapat dimuat lengkap')
+  await expect(report.getByRole('alert').filter({ hasText: 'belum dapat dimuat lengkap' })).toBeVisible()
   await expect(report.getByRole('button',{name:'Ekspor rekap (CSV)'})).toHaveCount(0)
 })
 
@@ -791,8 +821,8 @@ async function mockJournals(page:Page,role='teacher',{failResponse=false,unavail
   const entries:Record<string,unknown>[]=many ? Array.from({length:21},(_,index)=>({id:`journal-${index}`,assignment_id:'assignment-test',held_on:schoolToday(),topic:`Data Contoh Jurnal ${index}`,activities:'Data Contoh Kegiatan',reflection:'',class_name:'Data Contoh Kelas',subject_name:'Data Contoh Mapel',teacher_name:'Data Contoh Guru',academic_year_name:'Data Contoh Tahun',created_at:new Date().toISOString()})) : []
   const requests:Record<string,unknown>[]=[]
   let fail=failResponse
-  await page.route('https://example.supabase.co/rest/v1/teacher_assignments**',route=>route.fulfill({json:noAssignment?[]:[{id:'assignment-test',teacher_id:'teacher-test',class_id:'class-test',subject_id:'subject-test',is_active:true}]}))
-  await page.route('https://example.supabase.co/rest/v1/teaching_journals**',route=>{
+  await page.route('https://school-abc.supabase.co/rest/v1/teacher_assignments**',route=>route.fulfill({json:noAssignment?[]:[{id:'assignment-test',teacher_id:'teacher-test',class_id:'class-test',subject_id:'subject-test',is_active:true}]}))
+  await page.route('https://school-abc.supabase.co/rest/v1/teaching_journals**',route=>{
     if(unavailable) return route.fulfill({status:404,json:{code:'PGRST205',message:'Data Contoh backend unavailable'}})
     const url=new URL(route.request().url())
     if(route.request().method()==='POST') {
@@ -840,8 +870,9 @@ test('teacher journal retries uncertain responses with the same id without dupli
   await fillJournal(page)
   await page.getByRole('button',{name:'Ya, simpan jurnal'}).click()
   // The SDK may retry safe UUID-bound requests itself; otherwise the form keeps that UUID.
-  await expect(page.getByRole('status').filter({hasText:'Jurnal mengajar berhasil disimpan.'}).or(page.getByRole('alert'))).toContainText(/berhasil disimpan|belum dapat dipastikan/,{timeout:20000})
-  if(await page.getByRole('alert').isVisible()) {
+  const uncertainSave = page.getByRole('alert').filter({ hasText: 'Penyimpanan belum dapat dipastikan.' })
+  await expect(page.getByRole('status').filter({hasText:'Jurnal mengajar berhasil disimpan.'}).or(uncertainSave)).toContainText(/berhasil disimpan|belum dapat dipastikan/,{timeout:20000})
+  if(await uncertainSave.isVisible()) {
     mock.allowResponse()
     await page.getByRole('button',{name:'Periksa jurnal'}).click()
     await page.getByRole('button',{name:'Ya, simpan jurnal'}).click()
@@ -872,7 +903,7 @@ for(const role of ['student','parent','pending']) test(`${role} cannot request o
 test('journals show a preparation state when backend is unavailable and disable creation without assignment',async({page})=>{
   await mockJournals(page,'teacher',{unavailable:true})
   await page.goto('/jurnal')
-  await expect(page.getByRole('alert')).toContainText('sedang disiapkan')
+  await expect(page.getByRole('alert').filter({ hasText: 'Layanan jurnal sedang disiapkan' })).toBeVisible()
   await mockJournals(page,'teacher',{noAssignment:true})
   await page.getByRole('button',{name:'Coba lagi'}).click()
   await expect(page.getByRole('button',{name:'Catat jurnal hari ini'})).toBeDisabled()
@@ -906,7 +937,7 @@ test('attendance teacher records unmarked pupils then corrects with a reason',as
   await expect(page.getByLabel('Status Data Contoh Satu',{exact:true})).toHaveValue('present')
   await page.getByLabel('Status Data Contoh Dua',{exact:true}).selectOption('sick')
   await page.getByRole('button',{name:'Simpan absensi',exact:true}).click()
-  await expect(page.getByRole('alert')).toContainText('Isi alasan koreksi')
+  await expect(page.getByRole('alert').filter({ hasText: 'Isi alasan koreksi' })).toBeVisible()
   await page.getByLabel('Alasan koreksi Data Contoh Dua',{exact:true}).fill('Data Contoh Koreksi')
   await page.getByRole('button',{name:'Simpan absensi',exact:true}).click()
   await page.getByRole('button',{name:'Ya, simpan absensi'}).click()
@@ -946,7 +977,7 @@ test('attendance conflict preserves edits until explicit reload',async({page})=>
   await page.getByLabel('Status Data Contoh Satu',{exact:true}).selectOption('present')
   await page.getByRole('button',{name:'Simpan absensi',exact:true}).click()
   await page.getByRole('button',{name:'Ya, simpan absensi'}).click()
-  await expect(page.getByRole('alert')).toContainText('Data telah diubah pada sesi lain')
+  await expect(page.getByRole('alert').filter({ hasText: 'Data telah diubah pada sesi lain' })).toBeVisible()
   await expect(page.getByLabel('Status Data Contoh Satu',{exact:true})).toHaveValue('present')
   page.once('dialog',dialog=>dialog.accept())
   await page.getByRole('button',{name:'Muat ulang absensi'}).click()
@@ -979,10 +1010,9 @@ test('xlsx import previews and confirms before writing attendance',async({page})
   expect((await downloaded).suggestedFilename()).toBe(`template-absensi-${schoolToday()}.xlsx`)
   await expect(page.getByRole('button',{name:'Unduh template Excel'})).toBeEnabled()
   await expect(page.getByLabel('Pilih file Excel')).toBeEnabled()
-  const chooser=page.waitForEvent('filechooser')
-  await page.getByLabel('Pilih file Excel').click()
-  await (await chooser).setFiles({name:'data-contoh.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer})
-  await expect(page.getByRole('heading',{name:'Preview impor',exact:true})).toBeVisible()
+  await page.getByLabel('Pilih file Excel').setInputFiles({name:'data-contoh.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer})
+  // Parsing happens in a worker; keep the first preview assertion tolerant of a loaded CI machine.
+  await expect(page.getByRole('heading',{name:'Preview impor',exact:true})).toBeVisible({timeout:15000})
   await expect(page.getByRole('table',{name:'Perubahan dari file Excel'})).toContainText('Data Contoh Satu')
   expect(mock.importRequestIds.length).toBe(0)
   await page.getByRole('button',{name:'Konfirmasi impor',exact:true}).click()
@@ -998,9 +1028,9 @@ test('xlsx import rejects duplicate pupils and file types without sending a muta
   await page.goto('/absensi')
   await expect(page.getByLabel('Pilih file Excel')).toBeEnabled()
   await page.getByLabel('Pilih file Excel').setInputFiles({name:'invalid.xls',mimeType:'application/octet-stream',buffer:Buffer.from('bad')})
-  await expect(page.getByRole('alert')).toContainText('Gunakan file Excel .xlsx')
+  await expect(page.getByRole('alert').filter({ hasText: 'Gunakan file Excel .xlsx' })).toBeVisible()
   await page.getByLabel('Pilih file Excel').setInputFiles({name:'duplicate.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:await importFixture([['TEST_1','Hadir',''],['TEST_1','Sakit','']])})
-  await expect(page.getByRole('alert')).toContainText('kode siswa berulang')
+  await expect(page.getByRole('alert').filter({ hasText: 'kode siswa berulang' })).toBeVisible()
   await expect(page.getByRole('button',{name:'Konfirmasi impor',exact:true})).toBeDisabled()
   expect(mock.importRequestIds.length).toBe(0)
 })
@@ -1012,7 +1042,7 @@ test('xlsx retry reuses the same request after an uncertain response',async({pag
   await page.getByLabel('Pilih file Excel').setInputFiles({name:'retry.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:await importFixture([['TEST_1','Hadir','']])})
   await page.getByRole('button',{name:'Konfirmasi impor',exact:true}).click()
   await page.getByRole('button',{name:'Ya, impor absensi'}).click()
-  await expect(page.getByRole('alert')).toContainText('Impor belum dapat dikonfirmasi',{timeout:15000})
+  await expect(page.getByRole('alert').filter({ hasText: 'Impor belum dapat dikonfirmasi' })).toBeVisible({timeout:15000})
   mock.allowImportResponse()
   await page.getByRole('button',{name:'Konfirmasi impor',exact:true}).click()
   await page.getByRole('button',{name:'Ya, impor absensi'}).click()
@@ -1029,11 +1059,28 @@ for (const { role, attendance, journals } of [
   test(`main navigation follows the ${role} profile`, async ({ page }) => {
     await mockSchool(page, { role })
     await page.goto('/')
-    const navigation = page.getByRole('navigation', { name: 'Navigasi utama' })
-    await expect(navigation.getByRole('link', { name: 'Pengumuman', exact: true })).toBeVisible()
-    await expect(navigation.getByRole('link', { name: 'Absensi', exact: true })).toHaveCount(Number(attendance))
-    await expect(navigation.getByRole('link', { name: 'Jurnal', exact: true })).toHaveCount(Number(journals))
-    await expect(navigation.getByRole('link', { name: 'Beranda', exact: true })).toHaveAttribute('aria-current', 'page')
+    const mobile = (page.viewportSize()?.width ?? 1280) < 1000
+    if (mobile) {
+      const quick = page.getByRole('navigation', { name: 'Navigasi cepat' })
+      await expect(quick.getByRole('link', { name: 'Beranda', exact: true })).toHaveAttribute('aria-current', 'page')
+      await expect(quick.getByRole('link')).toHaveCount(4)
+      await expect(quick.getByRole('button', { name: 'Lainnya', exact: true })).toHaveCount(1)
+      await page.getByRole('button', { name: 'Lainnya', exact: true }).click()
+      const drawer = page.getByRole('dialog', { name: 'Menu lainnya' })
+      await expect(drawer).toBeVisible()
+      await expect(drawer.getByRole('link', { name: 'Pengumuman', exact: true })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Absensi', exact: true })).toHaveCount(Number(attendance))
+      await expect(page.getByRole('link', { name: 'Jurnal', exact: true })).toHaveCount(Number(journals))
+      await page.keyboard.press('Escape')
+      await expect(drawer).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Lainnya', exact: true })).toBeFocused()
+    } else {
+      const navigation = page.getByRole('navigation', { name: 'Navigasi utama' })
+      await expect(navigation.getByRole('link', { name: 'Pengumuman', exact: true })).toBeVisible()
+      await expect(navigation.getByRole('link', { name: 'Absensi', exact: true })).toHaveCount(Number(attendance))
+      await expect(navigation.getByRole('link', { name: 'Jurnal', exact: true })).toHaveCount(Number(journals))
+      await expect(navigation.getByRole('link', { name: 'Beranda', exact: true })).toHaveAttribute('aria-current', 'page')
+    }
   })
 }
 
@@ -1138,6 +1185,8 @@ test('academic report filters identities, charts published scores and exports co
   await expect(report.getByRole('meter')).toHaveCount(2)
   await expect(report.getByRole('meter').nth(0)).toHaveAttribute('value','0')
   await expect(report.getByRole('meter').nth(1)).toHaveAttribute('value','50')
+  await expect(report.getByRole('columnheader', { name: 'Status KKM' })).toBeVisible()
+  await expect(report.getByRole('cell', { name: 'Belum tuntas' }).first()).toBeVisible()
   await expect(report.getByRole('cell', { name: 'Data Contoh Lain', exact: true })).toHaveCount(0)
   const download = page.waitForEvent('download')
   await report.getByRole('button', { name: 'Ekspor akademik (CSV)' }).click()
@@ -1145,15 +1194,18 @@ test('academic report filters identities, charts published scores and exports co
   const chunks: Buffer[] = []; for await (const chunk of stream!) chunks.push(Buffer.from(chunk))
   const csv = Buffer.concat(chunks).toString('utf8')
   expect(csv).toContain('"001","\'=Data Contoh","0","20","0"')
+  expect(csv).toContain('"Status KKM"')
+  expect(csv).toContain('"Belum tuntas"')
   expect(csv).not.toContain('Data Contoh Lain')
   const excelDownload = page.waitForEvent('download')
   await report.getByRole('button', { name: 'Ekspor akademik (Excel)' }).click()
   const workbook = await excelDownload
   const values = await readSheet((await workbook.path())!)
   expect(values).toHaveLength(4)
-  expect(values[1].slice(6)).toEqual(['001','=Data Contoh',0,20,0])
-  expect(values[2].slice(8)).toEqual([5,10,50])
+  expect(values[1].slice(6)).toEqual(['001','=Data Contoh',0,20,0,'Belum tuntas'])
+  expect(values[2].slice(8)).toEqual([5,10,50,'Belum tuntas'])
   expect(values[3][8]).toBeNull()
+  expect(values[3][11]).toBe('Belum dinilai')
   const pdfDownload = page.waitForEvent('download')
   await report.getByRole('button', { name: 'Ekspor akademik (PDF)' }).click()
   const pdf = await pdfDownload
@@ -1175,7 +1227,7 @@ for (const mode of ['truncated','overflow','failure'] as const) {
     await page.getByText('Rekap dan perkembangan akademik', { exact: true }).click()
     const report = page.getByRole('region', { name: 'Rekap akademik', exact: true })
     await report.getByRole('button', { name: 'Tampilkan rekap akademik' }).click()
-    await expect(report.getByRole('alert')).toBeVisible()
+    await expect(report.getByRole('alert').filter({ hasText: /terlalu besar|melebihi 500 hasil|gagal dimuat lengkap/ })).toBeVisible()
     await expect(report.getByRole('table')).toHaveCount(0)
     await expect(report.getByRole('button', { name: 'Ekspor akademik (CSV)' })).toHaveCount(0)
     await expect(report.getByRole('button', { name: 'Ekspor akademik (PDF)' })).toHaveCount(0)
@@ -1240,7 +1292,7 @@ test('assessment revision conflict preserves the form until the latest result is
   await page.getByRole('button', { name: 'Isi nilai', exact: true }).click()
   await page.getByLabel('Nilai', { exact: true }).fill('8')
   await page.getByRole('button', { name: 'Simpan nilai', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Perubahan belum dikonfirmasi')
+  await expect(page.getByRole('alert').filter({ hasText: 'Perubahan belum dikonfirmasi' })).toBeVisible()
   await expect(page.getByLabel('Nilai', { exact: true })).toHaveValue('8')
   await expect(page.getByRole('button', { name: 'Simpan nilai', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: 'Coba lagi' }).click()
@@ -1289,7 +1341,7 @@ test('teacher saves, edits and publishes task feedback with revision checks', as
   await page.getByRole('button', { name: 'Lihat jawaban siswa' }).click()
   await page.getByLabel('Catatan umpan balik').fill('Periksa langkah kedua')
   await page.getByRole('button', { name: 'Simpan draf umpan balik' }).click()
-  await expect(page.getByText('Draf — belum dibagikan', { exact: true })).toBeVisible()
+  await expect(page.getByText('Draf, belum dibagikan', { exact: true })).toBeVisible()
   await page.getByLabel('Catatan umpan balik').fill('Langkah kedua sudah tepat')
   await page.getByRole('button', { name: 'Simpan draf umpan balik' }).click()
   await expect(page.getByRole('paragraph').filter({ hasText: /^Langkah kedua sudah tepat$/ })).toBeVisible()
@@ -1348,7 +1400,7 @@ test(`student submits a task answer and sees it after reopening: ${outcome}`, as
   await page.getByLabel('Jawaban teks').fill('  Jawaban contoh  ')
   await page.getByRole('button', { name: 'Kirim jawaban' }).click()
   if (outcome === 'response-lost') {
-    await expect(page.getByRole('alert')).toContainText('Jawaban belum dikonfirmasi')
+    await expect(page.getByRole('alert').filter({ hasText: 'Jawaban belum dikonfirmasi' })).toBeVisible()
     await expect(page.getByLabel('Jawaban teks')).toHaveValue('  Jawaban contoh  ')
     await expect(page.getByRole('button', { name: 'Kirim jawaban' })).toBeDisabled()
     await page.getByRole('button', { name: 'Muat ulang', exact: true }).click()
@@ -1375,7 +1427,7 @@ test('schedule admin handles conflicts and pending direct access is denied', asy
   await page.getByLabel('Penugasan').selectOption('assignment-test')
   await page.getByLabel('Alasan pengaturan').fill('Data Contoh pengaturan')
   await page.getByRole('button', { name: 'Simpan jadwal' }).click()
-  await expect(page.getByRole('alert')).toContainText('Jadwal bentrok')
+  await expect(page.getByRole('alert').filter({ hasText: 'Jadwal bentrok' })).toBeVisible()
   await expect(page.getByLabel('Alasan pengaturan')).toHaveValue('Data Contoh pengaturan')
   await page.getByRole('button', { name: 'Muat ulang jadwal', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Jadwal baru' })).toHaveCount(0)
@@ -1424,7 +1476,7 @@ test('administrator reviews schedule proposal snapshots and a stale decision rem
   await page.getByRole('combobox', { name: 'Keputusan', exact: true }).selectOption('accept')
   await page.getByLabel('Alasan keputusan').fill('Data Contoh persetujuan')
   await page.getByRole('button', { name: 'Simpan keputusan' }).click()
-  await expect(page.getByRole('alert')).toContainText('telah berubah')
+  await expect(page.getByRole('alert').filter({ hasText: 'Jadwal atau keputusan telah berubah' })).toBeVisible()
   await page.getByRole('button', { name: 'Muat ulang usulan' }).click()
   await expect(page.getByRole('button', { name: 'Simpan keputusan' })).toBeEnabled()
 })
@@ -1443,7 +1495,7 @@ test('schedule history shows creation, deactivation, paging and retry for princi
   })
   await page.goto('/jadwal')
   await page.getByRole('button', { name: 'Lihat riwayat Data Contoh Riwayat' }).click()
-  await expect(page.getByRole('alert')).toContainText('Riwayat gagal dimuat')
+  await expect(page.getByRole('alert').filter({ hasText: 'Riwayat gagal dimuat' })).toBeVisible()
   failed = false
   await page.getByRole('button', { name: 'Muat ulang riwayat' }).click()
   await expect(page.getByText(/^Sesudah:/).first()).toContainText('00:00–01:00')
@@ -1511,8 +1563,8 @@ test('school overview uses exact active counts and preserves unknown versus zero
   await page.goto('/dashboard')
   await expect(page.getByRole('article', { name: 'Siswa aktif' })).toContainText('1205')
   await expect(page.getByRole('article', { name: 'Guru aktif' })).toContainText('0')
-  await expect(page.getByRole('article', { name: 'Kelas aktif' })).toContainText('—')
-  await expect(page.getByRole('alert')).toContainText('Sebagian jumlah')
+  await expect(page.getByRole('article', { name: 'Kelas aktif' })).toContainText('N/A')
+  await expect(page.getByRole('alert').filter({ hasText: 'Sebagian jumlah belum dapat dimuat' })).toBeVisible()
   retry = true
   await page.getByRole('button', { name: 'Muat ulang ringkasan' }).click()
   await expect(page.getByRole('article', { name: 'Kelas aktif' })).toContainText('6')
@@ -1527,4 +1579,157 @@ for (const role of ['teacher','student','parent','pending']) test(`school overvi
   await expect(page.getByRole('heading', { name: 'Akses cepat' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Ringkasan data sekolah' })).toHaveCount(0)
   expect(requested).toBe(false)
+})
+
+for (const role of ['teacher','student','parent','pending'] as const) {
+  test(`account linking stays closed for ${role} without a mutation`, async ({ page }) => {
+    await mockSchool(page, { role })
+    await page.goto('/tautan-akun')
+    await expect(page.getByText('Halaman ini tersedia untuk administrator sekolah.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Tinjau tautan' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Ya, simpan' })).toHaveCount(0)
+  })
+}
+
+for (const role of ['student','parent','pending'] as const) {
+  test(`supervision stays closed for ${role} without a mutation`, async ({ page }) => {
+    await mockSchool(page, { role })
+    await page.goto('/supervisi')
+    await expect(page.getByText('Halaman ini tersedia untuk kepala sekolah dan guru.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Simpan' })).toHaveCount(0)
+  })
+}
+
+test('student reads published material without authoring controls', async ({ page }) => {
+  await mockSchool(page, { role: 'student' })
+  await page.route('**/rest/v1/class_materials?*', route => {
+    expect(new URL(route.request().url()).searchParams.get('kind')).toBe('eq.material')
+    return route.fulfill({ json: [{
+      id: 'material-example', class_name: 'Kelas 1A', subject_name: 'Matematika',
+      title: 'Data Contoh Materi', body: 'Isi materi terbit', status: 'published', revision: 1, due_on: null,
+    }] })
+  })
+  await page.goto('/materi')
+  await expect(page.getByRole('heading', { name: 'Data Contoh Materi' })).toBeVisible()
+  await expect(page.getByText('Isi materi terbit')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buat materi' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Terbitkan materi' })).toHaveCount(0)
+})
+
+test('teacher creates a class task draft with a deadline', async ({ page }) => {
+  await mockSchool(page, { role: 'teacher' })
+  const rows: Record<string, unknown>[] = []
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/teacher_assignments?*', route => route.fulfill({ json: [{
+    id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' },
+  }] }))
+  await page.route('**/rest/v1/class_materials?*', route => {
+    const request = route.request()
+    if (request.method() === 'POST') {
+      const payload = request.postDataJSON()
+      writes.push(payload)
+      rows.unshift({ id: 'task-new', class_name: 'Kelas 1A', subject_name: 'Matematika', status: 'draft', revision: 0, ...payload })
+      return route.fulfill({ json: { id: 'task-new' } })
+    }
+    return route.fulfill({ json: rows })
+  })
+  await page.goto('/tugas')
+  await page.getByRole('button', { name: 'Buat tugas' }).click()
+  await page.getByLabel('Penugasan').selectOption('assignment-example')
+  await page.getByLabel('Judul tugas').fill('Data Contoh Tugas Baru')
+  await page.getByLabel('Instruksi tugas').fill('Kerjakan di rumah.')
+  await page.getByLabel('Tenggat tugas').fill('2026-11-20')
+  await page.getByRole('button', { name: 'Simpan draf' }).click()
+  await expect(page.getByText('Draf tugas tersimpan.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Data Contoh Tugas Baru' })).toBeVisible()
+  expect(writes).toHaveLength(1)
+  expect(writes[0]).toMatchObject({ kind: 'task', assignment_id: 'assignment-example', title: 'Data Contoh Tugas Baru', due_on: '2026-11-20' })
+})
+
+test('teacher saves a teaching module draft for an active assignment', async ({ page }) => {
+  await mockSchool(page, { role: 'teacher' })
+  const rows: Record<string, unknown>[] = []
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/teacher_assignments?*', route => route.fulfill({ json: [{
+    id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' },
+  }] }))
+  await page.route('**/rest/v1/teaching_modules?*', route => {
+    if (route.request().method() === 'POST') {
+      const payload = route.request().postDataJSON()
+      writes.push(payload)
+      rows.unshift({ ...payload, status: 'draft', review_note: '', revision: 0,
+        teacher_assignments: { id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' } } })
+      return route.fulfill({ json: { id: payload.id } })
+    }
+    return route.fulfill({ json: rows })
+  })
+  await page.goto('/modul-ajar')
+  await page.getByRole('button', { name: 'Buat modul' }).click()
+  await page.getByLabel('Penugasan').selectOption('assignment-example')
+  await page.getByLabel('Judul').fill('Data Contoh Modul Baru')
+  await page.getByLabel('Tujuan pembelajaran').fill('Menyebutkan tujuan contoh.')
+  await page.getByLabel('Kegiatan pembelajaran').fill('Melakukan kegiatan contoh.')
+  await page.getByRole('button', { name: 'Simpan modul' }).click()
+  await expect(page.getByText('Modul ajar tersimpan.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Data Contoh Modul Baru' })).toBeVisible()
+  expect(writes).toHaveLength(1)
+  expect(writes[0]).toMatchObject({
+    assignment_id: 'assignment-example', title: 'Data Contoh Modul Baru',
+    objectives: 'Menyebutkan tujuan contoh.', activities: 'Melakukan kegiatan contoh.',
+  })
+})
+
+test('teacher submits a teaching module draft for review', async ({ page }) => {
+  await mockSchool(page, { role: 'teacher' })
+  const module = {
+    id: 'module-example', title: 'Data Contoh Modul', objectives: 'Tujuan contoh',
+    activities: 'Kegiatan contoh', status: 'draft', review_note: '', revision: 0,
+    teacher_assignments: { id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' } },
+  }
+  await page.route('**/rest/v1/teacher_assignments?*', route => route.fulfill({ json: [{
+    id: 'assignment-example', school_classes: { name: 'Kelas 1A' }, subjects: { name: 'Matematika' },
+  }] }))
+  await page.route('**/rest/v1/teaching_modules?*', route => {
+    if (route.request().method() === 'PATCH') {
+      expect(new URL(route.request().url()).searchParams.get('revision')).toBe('eq.0')
+      expect(route.request().postDataJSON()).toEqual({ status: 'submitted' })
+      Object.assign(module, { status: 'submitted', revision: 1 })
+      return route.fulfill({ json: [{ id: module.id }] })
+    }
+    return route.fulfill({ json: [module] })
+  })
+  await page.goto('/modul-ajar')
+  await page.getByRole('button', { name: 'Data Contoh Modul' }).click()
+  await page.getByRole('button', { name: 'Ajukan untuk diperiksa' }).click()
+  await expect(page.getByText('Status modul diperbarui.')).toBeVisible()
+  await expect(page.getByText('Diajukan', { exact: false })).toBeVisible()
+})
+
+for (const role of ['administrator', 'principal'] as const) {
+  test(`learning and assessment links stay hidden for ${role}`, async ({ page }) => {
+    await mockSchool(page, { role })
+    await page.goto('/')
+    for (const name of ['Materi Kelas', 'Tugas Kelas', 'Asesmen']) {
+      await expect(page.getByRole('link', { name })).toHaveCount(0)
+    }
+    if ((page.viewportSize()?.width ?? 1280) < 1000) await page.getByRole('button', { name: 'Lainnya', exact: true }).click()
+    await expect(page.getByRole('link', { name: 'Tautan akun' })).toHaveCount(role === 'administrator' ? 1 : 0)
+  })
+}
+
+test('home page drops promises for modules that are not built', async ({ page }) => {
+  await mockSchool(page)
+  await page.goto('/')
+  await expect(page.getByText('Materi, tugas, dan asesmen', { exact: true })).toBeVisible()
+  await expect(page.getByText('Kehadiran anak dan informasi sekolah', { exact: true })).toBeVisible()
+  await expect(page.locator('main').getByText(/komunikasi/i)).toHaveCount(0)
+  if ((page.viewportSize()?.width ?? 1280) < 1000) await page.getByRole('button', { name: 'Lainnya', exact: true }).click()
+  await expect(page.getByRole('link', { name: /7 Kebiasaan/i })).toBeVisible()
+})
+
+test('assessment result shows the KKM label next to the score', async ({ page }) => {
+  await mockAssessments(page, { role: 'student' })
+  await page.goto('/asesmen')
+  await page.getByRole('button', { name: 'Buka asesmen' }).click()
+  await expect(page.getByText('CONTOH01 · Nilai 10 / 20 · Belum tuntas')).toBeVisible()
 })
