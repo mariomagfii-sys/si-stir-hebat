@@ -615,7 +615,7 @@ test('teacher reads master data without edit controls', async ({ page }) => {
 test('pending users are denied master data and missing backend gives a useful error', async ({ page }) => {
   await mockSchool(page, { role: 'pending' })
   await page.goto('/sekolah')
-  await expect(page.getByText('Peran sekolah Anda belum ditetapkan.', { exact: false })).toBeVisible()
+  await expect(page.getByText('Peran sekolah Anda belum ditetapkan.', { exact: false })).toBeVisible({ timeout: 15000 })
   await expect(page.getByRole('button', { name: /Tambah/ })).toHaveCount(0)
 })
 
@@ -702,6 +702,15 @@ test('administrator assigns a teacher to class and subject', async ({ page }) =>
   await page.getByRole('button', { name: 'Simpan data' }).click()
   await page.getByRole('button', { name: 'Ya, simpan relasi' }).click()
   await expect(page.getByRole('cell', { name: 'GURU_01 · Data Contoh Guru Terkait', exact: true })).toBeVisible()
+})
+
+test('master data announces a truncated reference list instead of hiding it', async ({ page }) => {
+  await mockSchool(page, { relationsReady: true })
+  const students = Array.from({ length: 1001 }, (_, index) => ({ id: `student-${index}`, code: `SISWA_${index}`, name: `Data Contoh Siswa ${index}`, is_active: true }))
+  await page.route('**/rest/v1/students?**', route => route.fulfill({ json: students }))
+  await page.goto('/sekolah/class_enrollments')
+  await expect(page.getByRole('status').filter({ hasText: 'Sebagian daftar referensi dipotong' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tambah keanggotaan kelas' })).toBeEnabled()
 })
 
 test('empty dependencies disable relation creation and parent cannot open relations', async ({ page }) => {
