@@ -1,11 +1,23 @@
-## Verifikasi backend Codex — 20 November 2026 (sore)
+## Rerun dependency dan check - 20 November 2026
+
+- `npm ci` gagal pada Node default v26.13.0 karena binary esbuild terkunci (`EPERM`); retry via Node 24.22.3 gagal saat unlink binary Rollup terkunci. `npm install --ignore-scripts --prefer-offline --no-audit --no-fund` EXIT 0, dengan cleanup warnings untuk dua binary terkunci. `package-lock.json` tidak berubah.
+- Rerun `npm run check` Node v24.22.3: migration/CI check, lint, typecheck, dan **140/140** tes lulus; build gagal saat Vite membersihkan `dist/assets` terkunci (`EPERM`). Log `docs/logs/check-2026-11-20-current-node24.log`. Tsconfig dipulihkan byte-identik setelah cache sementara diarahkan ke folder di root.
+- Vite build terpisah ke `.tmp-dist-check` EXIT 0, 1.788 modul; audit manual 29 bundel JavaScript tidak menemukan identifier/email/password/nama fixture demo. Output sementara dibersihkan. `dist/` tetap belum diganti.
+
+## Check dan suite browser penuh Codex (historis: 20 November 2026)
+
+- `npm run check` Node v24.22.3 EXIT 0: 38 migration, CI check, lint, typecheck, **140/140 tes**, build 1.787 modul, audit **29 JavaScript tanpa akun demo**. Build memakai konfigurasi publishable sintetis proses-lokal; peringatan chunk PDF 790,69 kB. Log `docs/logs/check-2026-11-20-post-trace-node24.log`.
+- Suite browser penuh Playwright di port 5472 EXIT 0: **402/402 lulus** dalam 10,4 menit dengan trace dimatikan; log `docs/logs/browser-full-2026-11-20-port5472-traceoff.log`. Seluruh API ditiru; bukan UAT.
+- Hosted read-only 16:32 WIB: 23 migration, terbaru `20261113074045`, Advisor WARN `auth_leaked_password_protection`. Tidak ada hosted write, deploy, commit, atau merge. Gerbang hosted tetap tertahan oleh Advisor serta pemeriksaan backup/restore, `check:supabase`, dan Supabase lokal yang belum terpenuhi.
+
+## Verifikasi backend Codex
 
 - Menambah assertion database notifikasi untuk fan-out dari dokumen sekolah, modul ajar, supervisi terbit, laporan absen wali, dan pesan komunikasi. Tes memastikan penerima sesuai peran dan teks notifikasi tidak membocorkan penanda isi sensitif.
 - Bukti: Node v24.22.3, `node --test tests/database.test.mjs` EXIT 0 (**73/73**); `npm run check` EXIT 0 (**137/137**, 39 migration, lint, typecheck, build 1.781 modul, audit 26 berkas JS tanpa akun demo). Build memakai konfigurasi publishable sintetis proses-lokal dan membangun ulang `dist/`; peringatan chunk PDF 790,69 kB.
-- Run port 5397 melaporkan status Playwright `passed` dengan `failedTests=[]`, tetapi proses cleanup macet dan dihentikan (exit 1), sehingga tidak dihitung sebagai lulus. Rerun penuh dengan reporter baris pada port 5398 sedang berjalan; hasil akhir belum tersedia. Run penuh terakhir yang selesai adalah 312/312 pada port 5401, memakai API tiruan.
+- Browser rerun port 5398 selesai dengan **308/312 lulus, 4 gagal** (tiga ENOENT penutupan trace, satu `ERR_INSUFFICIENT_RESOURCES` pada navigasi `/jadwal` desktop); exit 1. Tidak dihitung sebagai hijau.
 - Tidak ada perubahan hosted. X3 menunggu Security Advisor bersih dan preflight/check Supabase; X9 Supabase lokal belum tersedia karena Docker/Podman/WSL tidak ada; deploy dan merge belum dilakukan. D1/D2 kini sudah diputuskan sementara pemilik.
 
-## Rekonsiliasi hosted read-only — 20 November 2026 (Codex)
+## Rekonsiliasi hosted read-only â€” 20 November 2026 (Codex)
 
 - Supabase MCP: 23 migration hosted cocok dengan 23 lokal pertama; `SELECT count(*)::bigint FROM public.todos` menghasilkan 0; Security Advisor tetap 1 WARN `auth_leaked_password_protection`.
 - Tidak ada operasi tulis hosted. X3 tetap tertahan sampai Security Advisor bersih; `check:supabase`, metadata RLS/Storage hosted, dan bukti backup/restore belum tersedia.
@@ -20,7 +32,7 @@
 
 ## Q3/Q4 lanjutan - Sinyal pemotongan daftar master - 20 November 2026
 
-- Semua hard cap referensi kini memakai `limit(cap + 1)`: opsi penugasan di `Assessments.tsx`, `ClassMaterials.tsx`, `TeachingModules.tsx`, `Schedules.tsx` (penugasan + kelas), opsi guru `AcademicSupervision.tsx`, selector tahun ajaran `MasterData.tsx` (200), dan riwayat absensi `Attendance.tsx` (200). Sebelumnya cap terpenuhi melempar galat generik seluruh halaman; sekarang data sampai batas tetap tampil dengan `ReferenceNotice` atau status "Riwayat dipotong pada 200 perubahan terbaru…".
+- Semua hard cap referensi kini memakai `limit(cap + 1)`: opsi penugasan di `Assessments.tsx`, `ClassMaterials.tsx`, `TeachingModules.tsx`, `Schedules.tsx` (penugasan + kelas), opsi guru `AcademicSupervision.tsx`, selector tahun ajaran `MasterData.tsx` (200), dan riwayat absensi `Attendance.tsx` (200). Sebelumnya cap terpenuhi melempar galat generik seluruh halaman; sekarang data sampai batas tetap tampil dengan `ReferenceNotice` atau status "Riwayat dipotong pada 200 perubahan terbaruâ€¦".
 - Tes baru `truncated assignment options are announced instead of silently dropped` (mock 1.001 penugasan: notifikasi tampil, tombol tetap aktif, 1.000 opsi + placeholder).
 - Bukti: `npm run check` Node v24.22.3 EXIT 0 (39 migration, 137/137, 26 bundel; `check-truncation.log`); `tests/browser/app.spec.ts` **214/214** desktop+ponsel port 5375 (`browser-truncation-5375.log`). Rincian: `docs/PEMOTONGAN_DAFTAR_2026-11-20.md`.
 
@@ -28,7 +40,7 @@
 
 - `src/app/Dashboard.tsx`: peran administrator/kepala sekolah kini memakai satu RPC `dashboard_overview()` lewat `getDashboardOverview(client)` (kontrak Codex, tidak diubah) untuk registri aktif, tahapan supervisi, status modul, dan pengumuman terbaru. `SchoolOverview.tsx`/`PrincipalOverview.tsx` (3 + 6 hitungan `head`) dihapus. Galat RPC tampil sebagai alert "Ringkasan dashboard belum dapat dimuat..." dan dipulihkan lewat tombol "Muat ulang"; guru/siswa/wali/pending tetap memakai jalur pengumuman lama.
 - Tes: mock `/rpc/dashboard_overview`, +5 skenario (satu panggilan overview untuk kepala sekolah, tanpa pemanggilan guru, galat pulih, angka registri + tautan, empat peran tanpa RPC); 3 tes principal/overview lama diganti; audit responsif memakai mock overview berangka nol.
-- Bukti: `npm run check` Node v24.22.3 EXIT 0 (39 migration, 137/137, 26 bundel; `check-q10.log`); suite penuh port 5372 300 tes, 299 lulus — satu timeout 30 dtk `[mobile] attendance administrator` yang lulus 2/2 saat diulang terpisah port 5373; run terfokus 56/56 port 5371. Rincian dan batas: `docs/DASHBOARD_Q10_2026-11-20.md`.
+- Bukti: `npm run check` Node v24.22.3 EXIT 0 (39 migration, 137/137, 26 bundel; `check-q10.log`); suite penuh port 5372 300 tes, 299 lulus â€” satu timeout 30 dtk `[mobile] attendance administrator` yang lulus 2/2 saat diulang terpisah port 5373; run terfokus 56/56 port 5371. Rincian dan batas: `docs/DASHBOARD_Q10_2026-11-20.md`.
 
 ## Q9 - 7 Kebiasaan ramah anak sesuai D6 - 20 November 2026
 
@@ -108,11 +120,11 @@ Verifikasi: `tests/browser/notifications.spec.ts` (2 tes x desktop 1280x900 + po
 Dokumen diselaraskan: AGENTS.md dan PROJECT_STATUS memakai angka 125/220; QA_COVERAGE menambah baris Pusat notifikasi; UAT_CHECKLIST dan PANDUAN_UAT menambah skenario notifikasi/kebiasaan/referensi dengan tanda belum dijalankan akun nyata; RBAC_RESMI_DRAFT menambah baris modul baru dan PD-09 sampai PD-12; Delivery Gate diberi lampiran Pusat notifikasi. Dashboard per peran belum diubah karena ringkasan guru/siswa/wali memerlukan kontrak data yang belum bertanda REVIEW dan mock tes dashboard menolak permintaan baru.
 
 
-## Batas proyek Codex dan pencatatan migration — 13 November 2026
+## Batas proyek Codex dan pencatatan migration â€” 13 November 2026
 
 Pengguna menetapkan aplikasi React/Vite yang ada sebagai satu-satunya aplikasi utama SI STIR HEBAT. `AGENTS.md` dan README kini menetapkan folder ini sebagai root kerja Codex dan menandai demo Next.js di luar folder sebagai non-kanonis. Migration hosted `20261113074045_create_private_todos` dicatat di `supabase/migrations` dengan RLS pemilik; tabel contoh kosong dan tidak dipakai UI aplikasi. `scripts/check-supabase.mjs` memasukkan tabel itu dalam pemeriksaan penolakan akses anonim. Advisor keamanan tidak melaporkan lint; migration dan policy diverifikasi melalui metadata tanpa membaca data pengguna.
 
-## Persiapan rilis operasional — 13 November 2026
+## Persiapan rilis operasional â€” 13 November 2026
 
 Permintaan pengguna: kerjakan hingga web dapat digunakan, buat repo GitHub baru lalu deploy ke Vercel. Pengguna kemudian memilih membuat repo privat sendiri dan mengirim URL. Konektor GitHub belum menampilkan repository; Computer Use ke Chrome ditolak oleh alat. Belum ada push atau deployment publik. Akun admin belum tersedia; pengguna meminta panduan aktivasi, bukan pembuatan akun pribadi.
 
@@ -122,19 +134,19 @@ Validasi sejauh ini: npm run check lulus 101 tes, lint, tipe dan build; build ta
 
 Rilis publik tetap menunggu URL repo privat dan koneksi deployment. Belum dapat diklaim siap operasional hingga akun admin, login/pemulihan email nyata, konfigurasi hosting dan UAT sekolah selesai. Cakupan PRD lanjutan tetap terbuka; skema nilai sementara tidak berubah. Peringatan ukuran chunk PDF tetap ada.
 
-## Filter kelas jadwal — 13 November 2026
+## Filter kelas jadwal â€” 13 November 2026
 
 Filter kelas `/jadwal` diterapkan di query server sebelum pagination, bersama filter tanggal/hari atau mode pengelolaan. Perubahan pilihan mereset halaman dan formulir agar hasil halaman sebelumnya tidak tertinggal. Opsi menggunakan ID kelas dan label tahun ajaran, termasuk kelas nonaktif untuk pemeriksaan historis. Data master kelas memang dapat dibaca semua peran sekolah menurut policy yang ada; isi jadwal tetap mengikuti RLS penugasan/enrollment/relasi wali. UI menjelaskan cakupan ini serta bahwa filter tidak mengubah daftar usulan. Opsi dibatasi kurang dari 1000; kegagalan atau batas tercapai menampilkan error, bukan daftar parsial.
 
 Node 24 npm run check lulus: 101 tes, lint, tipe, build. Dua belas tes browser jadwal desktop/ponsel lulus, ditambah dua regresi supervisi. Skenario baru menguji filter server dari halaman kedua, reset halaman, kelas bernama sama berbeda tahun ajaran, serta tidak adanya kontrol audit pada wali. Tes browser menggunakan API tiruan. Tidak ada migrasi atau pembacaan data pribadi; UAT sekolah tetap terbuka. Peringatan ukuran chunk PDF yang sudah ada tetap muncul.
 
-## Riwayat jadwal — 13 November 2026
+## Riwayat jadwal â€” 13 November 2026
 
 Admin dan kepala sekolah dapat membuka riwayat per jadwal pada `/jadwal`: snapshot sebelum/sesudah, jam, periode, status aktif, revisi, waktu audit berlabel WIB dan alasan. Pembuatan awal dibedakan dari perubahan. Pagination 20 baris, retry dan pembatalan request menjaga tampilan ketika pindah halaman. Memakai tabel audit/RLS yang ada; tidak ada migrasi atau akses data pribadi.
 
 Validasi: Node 24 npm run check lulus (101 tes, lint, tipe, build). Delapan tes browser jadwal sebelumnya lulus, dua skenario riwayat desktop/ponsel lulus setelah fixture kegagalan dibuat persisten agar tidak tertutupi retry otomatis klien. Tes regresi supervisi, absensi dan asesmen yang ikut filter juga lulus. Browser memakai API tiruan; UAT sekolah masih terbuka. Peringatan chunk PDF lama tetap ada. Riwayat menampilkan alasan dan waktu; nama pelaku belum ditampilkan.
 
-## Usulan perubahan jadwal — 13 November 2026
+## Usulan perubahan jadwal â€” 13 November 2026
 
 Guru dapat mengusulkan perubahan hari, jam, dan periode jadwal aktif miliknya melalui `/jadwal`. Usulan menyimpan snapshot jadwal asal dan revisi, alasan wajib, serta satu usulan pending per jadwal. Admin melihat perbandingan semula/usulan lalu menyetujui dan menerapkan atau menolak dengan alasan. Kepala sekolah hanya membaca. Usulan dan keputusan tidak dibuka kepada siswa/wali. Penugasan aktif tetap diperlukan bagi guru untuk membaca usulannya.
 
@@ -151,7 +163,7 @@ Migration `20261113061010_schedule_proposals` diterapkan; total 22 migration. Me
 - Verifikasi: `npm run typecheck` lulus; lint terfokus `npx eslint src/app/Account.tsx src/app/Profile.tsx` lulus; 14 skenario Playwright terpilih desktop dan mobile lulus dengan API tiruan.
 - Batas: belum ada UAT akun sekolah nyata dan belum ada run suite browser penuh pada perubahan ini.
 
-## 10 November 2026 — Audit berdasarkan master prompt
+## 10 November 2026 â€” Audit berdasarkan master prompt
 
 Proyek yang sudah ada dipertahankan. Pemeriksaan mencakup source, routing, konfigurasi TypeScript/Vite/Supabase, migration, dependensi, Git, dan dokumen referensi. Tidak ditemukan dokumen PRD/blueprint/RBAC/API yang disebutkan. Git menunjukkan perubahan workspace belum di-commit.
 
@@ -166,7 +178,7 @@ Hasil sebelum perubahan fase ini: 20 tes unit/database, 18 tes browser, dan buil
 
 Hasil fase berikutnya dicatat setelah pemeriksaan dijalankan; tidak menganggap instalasi atau penulisan source sebagai bukti fitur telah berfungsi.
 
-## Fondasi — hasil
+## Fondasi â€” hasil
 
 - `eslint.config.js`, script `lint`, `typecheck`, dan `check` terpasang. CI menambahkan lint dan typecheck sebelum tes/build.
 - `src/components/ui/Feedback.tsx`: komponen loading, empty, dan pesan kesalahan dengan retry.
@@ -181,7 +193,7 @@ Hasil fase berikutnya dicatat setelah pemeriksaan dijalankan; tidak menganggap i
 - `src/utils/csv.ts`: CSV UTF-8/BOM dengan escaping serta mitigasi formula spreadsheet; hanya mengekspor baris halaman yang sedang terlihat.
 - `tests/master.test.mjs`, `tests/csv.test.mjs`, `tests/database.test.mjs`, dan `tests/browser/app.spec.ts`: validasi, payload whitelist, CSV, RLS semua peran, kalender, periode aktif tunggal, edit, konfirmasi, unduhan, dan kondisi backend belum tersedia.
 
-## Migration remote — disetujui dan diverifikasi
+## Migration remote â€” disetujui dan diverifikasi
 
 Pemeriksaan konflik menemukan hanya tabel profil/pengumuman dari riwayat sebelumnya. Pengguna menyetujui lima tabel master baru dan pencabutan izin eksekusi fungsi bawaan. Native MCP digunakan; tidak menggunakan secret key frontend atau mengubah peran akun.
 
@@ -203,7 +215,7 @@ Verifikasi metadata: tujuh tabel, seluruhnya RLS aktif; 20 policy; dua trigger k
 - Setelah penambahan unduhan CSV, seluruh suite browser dijalankan ulang: **28/28 lulus**, desktop dan ponsel, dalam 59,9 detik.
 - Pengujian remote menggunakan metadata dan akses anonim. Tidak mengklaim pengiriman email, login akun sekolah, atau alur akademik yang belum dibangun telah diuji langsung.
 
-## Registri guru/siswa — 10 November 2026
+## Registri guru/siswa â€” 10 November 2026
 
 - `src/features/school/master.ts`: definisi guru/siswa, validasi kode/nama, payload whitelist, dan fungsi izin yang memisahkan data orang dari master nonpribadi.
 - `src/features/school/MasterData.tsx`: tab sesuai peran, tambah/ubah dan ekspor menggunakan komponen yang ada; akses langsung ke URL terlarang tetap ditolak. UI tidak menampilkan input UUID, penghubung akun, atau perubahan peran.
@@ -216,7 +228,7 @@ Hasil: `npm run check` lulus (lint, TypeScript, **43 tes unit/database**, build)
 
 Tidak ada akun dibuat, peran diubah, penghubungan profil, atau data guru/siswa nyata dimasukkan. Penugasan, keanggotaan kelas dan verifikasi wali masih pekerjaan berikutnya.
 
-## Keanggotaan dan penugasan — implementasi lokal berikutnya
+## Keanggotaan dan penugasan â€” implementasi lokal berikutnya
 
 - Migration `20261110084348_class_enrollments_assignments.sql`: relasi kelas per tahun dan penugasan kelas/mata pelajaran; FK komposit menjaga riwayat tahun kelas, indeks unik parsial membatasi kelas aktif siswa, dan trigger memeriksa kapasitas serta status aktif.
 - `school_private.can_read_assigned_student(uuid)` memeriksa pengguna/peran di dalam fungsi privat dan menghindari siklus RLS antara siswa/keanggotaan. Akses guru mengikuti penugasan dan status aktif; guru tidak mendapat izin menulis data siswa atau relasi.
@@ -228,7 +240,7 @@ Hasil: **50 tes unit/database lulus**, suite penuh **42 tes browser lulus**. Set
 
 Pengguna menyetujui melalui bubble. Pemeriksaan menemukan 9 tabel lama dan tidak ada konflik nama relasi. Native MCP menerapkan versi `20261110084348`, kemudian metadata mengonfirmasi RLS dan tiga policy pada setiap tabel baru, policy tambahan siswa untuk guru bertugas, serta grant update hanya `is_active`. Helper SECURITY DEFINER berada di schema `school_private` yang tidak diekspos Data API, memiliki pemeriksaan identitas/peran internal, dan tidak memberikan execute kepada anon. Advisor keamanan: `lints: []`. Tidak mengubah peran, membuat data, atau menghubungkan akun.
 
-## Absensi manual — implementasi lokal
+## Absensi manual â€” implementasi lokal
 
 - `src/features/attendance/Attendance.tsx`: sesi per kelas, salinan peserta hari ini, editor status tanpa hadir otomatis, konfirmasi, alasan koreksi, rekap, CSV tersimpan, riwayat dan pesan konflik revisi.
 - `src/features/attendance/attendance-model.ts`: tipe, label, ringkasan yang memisahkan belum diisi dari alpa, validasi koreksi dan tanggal aplikasi. Nama file model dibedakan dari komponen agar resolusi modul Windows tidak bertabrakan.
@@ -242,7 +254,7 @@ Verifikasi: **62 tes unit/database**, lint, TypeScript dan build lulus; **14 tes
 
 Pengguna menyetujui migration melalui bubble. Pemeriksaan konflik menemukan 11 tabel lama dan tidak ada fungsi absensi dengan nama yang bentrok. Native MCP menerapkan versi `20261110091137`; file lokal diselaraskan dengan versi remote. Verifikasi metadata: RLS aktif pada tiga tabel baru, catatan/audit tidak memiliki grant tulis langsung bagi klien, insert sesi hanya untuk kolom kelas/tanggal, dan RPC publik SECURITY INVOKER tidak dapat dieksekusi anon. Advisor keamanan: `lints: []`. Pemeriksaan live Auth serta penolakan akses anonim ke 14 tabel lulus tanpa membaca baris data. Tidak mengisi absensi, menghubungkan akun atau mengubah peran.
 
-## Impor XLSX — 10 November 2026
+## Impor XLSX â€” 10 November 2026
 
 - Dependensi runtime dipin: `read-excel-file`, `write-excel-file`, dan `unzipit`. API aktual diperiksa dari tipe versi terpasang, termasuk `.toBuffer()`/`.toFile()` dan pembacaan workbook berisi sheet/data.
 - `import-model.ts`: template dengan identitas sesi; validasi kode teks, duplikasi, cakupan peserta, status, alasan, jumlah baris; blank/omitted bukan alpa. Preview mengikat revisi status yang tersimpan.
@@ -352,7 +364,7 @@ Regresi penuh pertama fase jurnal: 83/86 lulus. Dua assertion status jurnal terl
 - Menambah jenis tugas dan tenggat pada alur kelas yang sudah ada. Materi lama tetap tampil di /materi.
 - Migration 20261111092744_class_tasks diterapkan. RLS, constraint, trigger dan Security Advisor diperiksa. Build, 87 tes lokal dan empat tes browser lulus.
 
-## Pemeriksaan workspace — 12 November 2026
+## Pemeriksaan workspace â€” 12 November 2026
 
 Antarmuka TaskSubmissions sudah tersedia dan terhubung dari halaman tugas. Siswa dapat mengirim jawaban teks, sedangkan guru dapat membaca jawaban dengan pagination. Penerapan migration task_submissions di remote dan pengujian browser alur pengumpulan belum diverifikasi pada pemeriksaan ini.
 
@@ -363,10 +375,10 @@ npm run check berhasil: lint, TypeScript, 87 tes lokal dan build produksi lulus.
 - Menambahkan jawaban teks melalui /tugas. Database memvalidasi publikasi, tenggat WIB, identitas dan keanggotaan kelas saat pengiriman serta mencegah pengiriman ganda.
 - Migration 20261111232717_task_submissions diterapkan. Build dan 87 tes lokal lulus, termasuk pembatasan akses guru, siswa dan wali. Security Advisor tidak melaporkan temuan.
 
-## Verifikasi pengumpulan tugas — 12 November 2026
+## Verifikasi pengumpulan tugas â€” 12 November 2026
 
 Riwayat Supabase diperiksa langsung: migration task_submissions belum diterapkan. Seluruh 87 tes lokal lulus, termasuk pengumpulan, pengiriman ganda dan pembatasan akses. Tes browser baru memeriksa pengiriman jawaban serta pemuatan ulang halaman. Eksekusi browser belum berhasil diverifikasi karena server pengujian tidak mencapai kondisi siap. Penerapan remote dan verifikasi browser masih tertunda.
-# Verifikasi pengumpulan dan pemulihan koneksi — 12 November 2026
+# Verifikasi pengumpulan dan pemulihan koneksi â€” 12 November 2026
 
 - Mengonfirmasi migration `20261111232717_task_submissions` pada riwayat Supabase; metadata menunjukkan RLS aktif dan akses SELECT anonim ditolak. Tidak membaca data pengguna.
 - Mengunci pengiriman ulang ketika hasil permintaan belum diketahui sampai pemeriksaan status berhasil. Isian jawaban dipertahankan ketika koneksi gagal.
@@ -374,7 +386,7 @@ Riwayat Supabase diperiksa langsung: migration task_submissions belum diterapkan
 - Validasi: `npm run check` lulus (87 tes, lint, TypeScript, build); enam tes browser terfokus lulus di Edge desktop dan ponsel pada port pengujian 5193.
 - Mengoreksi catatan status migrasi yang bertentangan. UAT akun sekolah dan implementasi penilaian/umpan balik masih terbuka.
 
-# Umpan balik tugas — 12 November 2026
+# Umpan balik tugas â€” 12 November 2026
 
 - Rekonsiliasi PRD bagian 5.7/5.8, RBAC, API dan blueprint database: umpan balik tugas wajib; siswa/wali hanya membaca hasil terbit. Skema nilai resmi belum ditetapkan dalam PRD sehingga tahap ini tidak mengasumsikan skala angka.
 - Menambahkan `TaskFeedback` pada jawaban siswa/guru dan panel baca wali. Draf memakai pemeriksaan revisi, publikasi memerlukan tinjauan draf tersimpan, kegagalan simpan meminta pemuatan ulang, hasil terbit dikunci.
@@ -383,7 +395,7 @@ Riwayat Supabase diperiksa langsung: migration task_submissions belum diterapkan
 - Validasi: lint, TypeScript, 88 tes lokal dan build lulus. Delapan tes browser lulus pada eksekusi pertama; dua tes guru gagal karena selector mencocokkan paragraf dan textarea, diperbaiki lalu keduanya lulus. Total sepuluh skenario terfokus diverifikasi pada desktop/ponsel.
 - Terbuka: UI riwayat/pengawasan, koreksi hasil terbit, asesmen numerik sesuai skema sekolah, laporan akademik dan UAT.
 
-# Asesmen akademik — 12 November 2026
+# Asesmen akademik â€” 12 November 2026
 
 - Mengikuti keputusan eksplisit pengguna: nilai maksimum per asesmen dan publikasi manual guru sesuai penugasan, tanpa perhitungan rapor otomatis.
 - Membuat halaman `/asesmen`: daftar berhalaman, pembuatan, metadata draf, daftar peserta, nilai/catatan per siswa, tinjauan publikasi, koreksi beralasan serta riwayat. Siswa/wali mendapat tampilan baca hasil terbit; admin/kepala sekolah hanya pengawasan.
@@ -393,7 +405,7 @@ Riwayat Supabase diperiksa langsung: migration task_submissions belum diterapkan
 - Validasi: `npm run check` (93 tes, lint, TypeScript, build) lulus. Setelah memperkuat alasan koreksi, 60 tes database lulus ulang. Sepuluh tes browser desktop/ponsel diverifikasi melalui eksekusi awal dan pengulangan dua tes guru setelah perbaikan selector pengujian. Tes mencakup nilai nol, publikasi, koreksi, riwayat, konflik revisi, serta kontrol baca siswa/wali/kepala sekolah.
 - Pekerjaan lanjutan: rekap/ekspor dan grafik akademik, hak wali kelas, perubahan peserta dan UAT. Tidak mengklaim seluruh PRD selesai.
 
-# Rekap akademik dan skema sementara — 12 November 2026
+# Rekap akademik dan skema sementara â€” 12 November 2026
 
 - Menambahkan panel rekap di halaman asesmen: tanggal inklusif, kelas, mata pelajaran, publikasi untuk staf dan pilihan siswa berdasarkan ID. Ekspor CSV/Excel memakai hasil lengkap filter lintas halaman; grafik batang hanya nilai terbit untuk satu siswa dan pelajaran.
 - Mempertahankan nilai nol, nilai belum diisi dan kode siswa berawalan nol. Persentase hanya skor/maksimum, tanpa perhitungan rapor atau bobot. Pengguna secara eksplisit menegaskan skema sementara menunggu aturan resmi; keputusan dan antarmuka diperbarui.
@@ -403,7 +415,7 @@ Riwayat Supabase diperiksa langsung: migration task_submissions belum diterapkan
 - Validasi Node 24: `npm run check` lulus dengan 97 tes; 60 tes database dijalankan ulang setelah tambahan query join RLS dan lint final lulus. Dua belas tes Playwright desktop/ponsel lulus dengan API tiruan, termasuk membaca workbook yang diunduh. Mock awal perlu header CORS expose Content-Range dan skenario 403 untuk penolakan izin; setelah diperbaiki semua skenario lulus.
 - Menyelaraskan README dengan fitur dan 20 migration aktual. Tidak membaca baris data pribadi, membuat akun nyata, atau melakukan deployment. PDF dan UAT tetap terbuka.
 
-# PDF rekap akademik — 12 November 2026
+# PDF rekap akademik â€” 12 November 2026
 
 - Menambahkan unduhan PDF lokal dari hasil rekap lengkap yang sudah dibatasi RLS dan filter. Semua bidang ekspor CSV/Excel dipertahankan dalam tujuh kolom gabungan, dengan periode/filter/waktu data dan penanda skema sementara. Tidak mengubah kontrak penilaian atau membuat migrasi.
 - Memasang versi tetap pdfmake 0.3.14 dan @types/pdfmake 0.3.3 setelah memeriksa dokumentasi/release resmi. Audit npm saat instalasi tidak melaporkan kerentanan. Font dibundel, tanpa mengambil font atau mengirim data ke layanan PDF eksternal.
@@ -413,7 +425,7 @@ Riwayat Supabase diperiksa langsung: migration task_submissions belum diterapkan
 - UAT akun sekolah, skema resmi, kewenangan wali kelas, perubahan peserta dan modul PRD lain tetap terbuka.
 
 
-## Jadwal pelajaran — 13 November 2026
+## Jadwal pelajaran â€” 13 November 2026
 
 Fondasi `/jadwal` tersedia: admin membuat/mengubah/menonaktifkan jadwal mingguan dengan rentang tanggal dalam tahun ajaran, penugasan tetap, alasan wajib, audit database, dan revisi optimistis. Server menolak bentrok guru atau kelas, memeriksa kejadian hari dalam irisan periode, serta mengunci transaksi penulisan jadwal. Guru membaca sesuai penugasan aktif; siswa dan wali sesuai kelas dan hubungan terverifikasi. Kepala sekolah membaca; pending dan anonim ditolak. Daftar dipaginasi 25 item; admin/kepala sekolah dapat melihat jadwal nonaktif melalui mode pengelolaan.
 
@@ -427,7 +439,7 @@ Pekerjaan berikutnya: usulan perubahan jadwal oleh guru sesuai PRD, tampilan riw
 
 Hasil final rilis 13 November: pengulangan mobile lulus 82/82. Total cakupan akhir browser 164 skenario lulus (82 desktop + 82 mobile pada run terpisah setelah server tes awal berhenti). URL repo GitHub masih menunggu pengguna.
 
-## Audit kesesuaian workspace — 14 November 2026
+## Audit kesesuaian workspace â€” 14 November 2026
 
 Pemeriksaan langsung pada root aplikasi: npm run check lulus (lint, TypeScript, 101 tes, build). Build memberi peringatan chunk mesin PDF 790,69 KB dan font 855,16 KB. Browser dan UAT akun sekolah tidak diulang pada audit ini.
 
@@ -439,7 +451,7 @@ Tanggal sekolah masih memakai Asia/Jakarta pada frontend dan migration. Konfirma
 14 November 2026: Repo https://github.com/mariomagfii-sys/si-stir-hebat berhasil di-clone ke D:/code/SI_STIR_HEBAT_Starter/github-release. Paket rilis 108 berkas diunggah ke main, commit 86fe0e79224d4d607afdd30cfeb633a24b8a5fa9; git ls-remote cocok dengan HEAD lokal. Tidak menyertakan .env.local, .env, .vercel atau lampiran pribadi. CI GitHub belum diverifikasi (konektor memberi 404; Git CLI berhasil). Deployment Vercel dan aktivasi admin tetap belum selesai.
 14 November 2026: Login Vercel berhasil melalui device authorization; proyek si-stir-hebat dibuat dan deployment CLI produksi READY (dpl_DHXi8ktz5chWQQji1wTJQdrLMjEk). URL publik https://si-stir-hebat-blue.vercel.app. Empat route HTTP 200; browser headless mobile memverifikasi login nyata (bukan demo), redirect /jadwal tanpa sesi, tidak meluber dan tidak ada pageerror. Hanya akses anonim, tidak membaca data pribadi. Node24 diselaraskan package/lock (push b07638d). Panduan produksi/aktivasi diunggah commit36f8c53. GitHub auto-deploy belum terhubung karena Vercel meminta GitHub Login Connection. Site URL/redirect Auth, aktivasi admin, login/email nyata dan UAT tetap belum terverifikasi. Tujuan PRD penuh belum selesai.
 
-## Ringkasan sekolah dashboard � 14 November 2026
+## Ringkasan sekolah dashboard ï¿½ 14 November 2026
 
 PRD 5.1 ditindaklanjuti: admin/kepala sekolah melihat jumlah siswa, guru dan kelas berstatus aktif. Query HEAD dengan exact count, bukan mengunduh baris atau menghitung halaman; RLS tabel tetap berlaku. Label menjelaskan kelas mencakup seluruh tahun ajaran dan siswa berasal dari registri, bukan enrollment. Nol, belum dimuat dan gagal dibedakan. Partial failure mempertahankan jumlah yang berhasil; retry tersedia. Tidak ada query ringkasan pada guru/siswa/wali/pending. Tautan menuju data master terkait tersedia.
 
@@ -496,7 +508,7 @@ Migration 20261114083827 dan API pesan/penerima dibuat dengan RLS, penugasan dan
 - `docs/QA_COVERAGE.md` diperbarui: 202 skenario, rute `/komunikasi` dicatat belum ada tes.
 - `npm run check` penuh **belum** lulus pada 15 November 2026 karena `src/features/komunikasi/Communication.tsx` (sedang disunting) gagal typecheck. Gerbang CI Kilo (`check-migrations`, `check-ci`) lulus.
 
-## Pengamanan demo dan penyelesaian UI Komunikasi — 15 November 2026
+## Pengamanan demo dan penyelesaian UI Komunikasi â€” 15 November 2026
 
 - Mode demo digate ketat pada `import.meta.env.DEV === true` dan Supabase yang tidak terkonfigurasi. Untuk build, Vite mengganti modul demo dengan stub; `scripts/check-demo-bundle.mjs` memeriksa seluruh JS hasil build. Tidak ada perubahan akun, Auth hosted, atau data.
 - Alur kirim Komunikasi mempertahankan ID dan isi pesan ketika respons belum diketahui, mencari ID sebelum retry, lalu memverifikasi hasil setelah galat. Daftar pesan memuat 25 baris per halaman dengan sentinel pagination agar tidak melewatkan baris batas.
@@ -505,7 +517,7 @@ Migration 20261114083827 dan API pesan/penerima dibuat dengan RLS, penugasan dan
 - Suite browser penuh: 212/216 lulus; empat kegagalan terjadi saat `browserContext.close` karena berkas trace/zip tidak ditemukan (`ENOENT`). Keempat skenario lulus pada pengulangan terarah. Suite penuh belum berstatus lulus.
 - Belum: migration `student_habits` dan `komunikasi` hosted, keputusan RBAC/retensi/pengawasan Komunikasi, smoke produksi, CI hosted, dan UAT akun sekolah. Jangan commit/push/deploy sebelum worktree bersama ditinjau dan perubahan agen lain dipisahkan.
 
-# Backend security, dokumen, notifikasi, kebiasaan — 20 November 2026 (Codex)
+# Backend security, dokumen, notifikasi, kebiasaan â€” 20 November 2026 (Codex)
 
 - Memperketat konfigurasi Supabase produksi menjadi URL sah + publishable key `sb_publishable_...`; fixture akun demo dipindah ke `tests/fixtures/` dan production stub diuji tanpa storage session.
 - Menambahkan migration lokal berurutan untuk drop `todos` dengan guard baris kosong, policy feedback author-only drafts, versi/review/event dokumen, rekap mingguan kebiasaan, fanout notifikasi generik, serta katalog kebiasaan dan pembersihan metadata validasi. Tidak menyunting 23 migration hosted.
@@ -515,36 +527,36 @@ Migration 20261114083827 dan API pesan/penerima dibuat dengan RLS, penugasan dan
 - Bukti lokal: Node v24.22.3, `npm test` 129/129; `node scripts/check-migrations.mjs` 35 migration OK; `node --test tests/database.test.mjs` 70/70. Build negatif Vite tanpa env berhenti (exit 1). Full `npm run check` belum hijau karena typecheck menunggu Qoder menambah label kategori UI.
 - Hosted read-only: 23 versi hosted = 23 awal lokal, todos count 0; Security Advisor memiliki satu WARN perlindungan kata sandi bocor. Tidak ada migration atau setting hosted diubah.
 - Belum: migration hosted, API upload dokumen end-to-end, RPC absensi guru, RPC dashboard/performance EXPLAIN, retensi diuji lokal, deploy, smoke production, merge. D7 dipertahankan; konflik X6 dicatat di `AI_COORDINATION.md`.
-## Codex backend — 20 November 2026 (pembaruan)
+## Codex backend â€” 20 November 2026 (pembaruan)
 
 - PGlite dan API backend: `todos` guard/drop, draft-feedback owner-only, tests Storage supervision evidence, dokumen sekolah kategori/versi/review/audit + pembersihan draft tanpa file, fanout notifikasi, teacher attendance dengan idempotensi dan koreksi disetujui kepala sekolah, katalog 7 kebiasaan + rekap mingguan. Retensi diuji dengan Auth sintetis.
 - Tes penuh Node v24.22.3: 134/134 lulus, lint dan typecheck lulus. `npm run check` tidak mencapai status hijau karena Vite gagal menulis ke `dist/` di sandbox; eskalasi ditolak auto-review. Build output tidak dihapus manual. Probe di root lulus, probe di `dist/` gagal.
 - Migration: 37 lokal, 23 hosted; checker lulus. Tidak ada hosted write. Advisor read-only masih melaporkan satu WARN leaked-password protection, sehingga penerapan ditahan.
 - X6 guardian absence tetap review-only sesuai D7; operasi otomatis mengubah absensi siswa sengaja belum dibuat. X9 belum memverifikasi FK audit historis atau Supabase lokal.
 - Tersisa: X8 indeks/EXPLAIN/dashboard RPC, X10 deploy, X11 review/merge. Tidak ada commit atau perubahan UI oleh Codex.
-## X8 dashboard overview — 20 November 2026 (pembaruan)
+## X8 dashboard overview â€” 20 November 2026 (pembaruan)
 
 - Menambahkan migration `20261120044500_dashboard_overview` dan API `getDashboardOverview(client: SupabaseClient): Promise<DashboardOverview>`.
-- EXPLAIN ANALYZE PGlite atas dataset 50.000 modul sintetis mengukur submitted 8,46 ms → 1,24 ms dan returned 7,08 ms → 1,53 ms setelah partial index; stage=4 index lebih lambat (12,95 → 17,98 ms) dan active students tetap seq scan. Migration hanya memuat dua partial index status modul. Ini bukti simulasi lokal, bukan benchmark hosted.
-- RPC satu panggilan mengembalikan profil, hitungan registri aktif, supervisi tahap 1–4, modul submitted/returned, jumlah pengumuman dan tiga item terbit terbaru. Hanya administrator/kepala sekolah; PGlite menguji role tersebut dan penolakan guru/anon.
+- EXPLAIN ANALYZE PGlite atas dataset 50.000 modul sintetis mengukur submitted 8,46 ms â†’ 1,24 ms dan returned 7,08 ms â†’ 1,53 ms setelah partial index; stage=4 index lebih lambat (12,95 â†’ 17,98 ms) dan active students tetap seq scan. Migration hanya memuat dua partial index status modul. Ini bukti simulasi lokal, bukan benchmark hosted.
+- RPC satu panggilan mengembalikan profil, hitungan registri aktif, supervisi tahap 1â€“4, modul submitted/returned, jumlah pengumuman dan tiga item terbit terbaru. Hanya administrator/kepala sekolah; PGlite menguji role tersebut dan penolakan guru/anon.
 - `npm test` Node v24.22.3: 137/137 lulus; migration checker: 38 file berurutan; database+API terfokus 75/75; typecheck dan lint lulus.
 - UI belum dialihkan ke RPC (permintaan lintas AI ke Qoder dicatat di `docs/AI_COORDINATION.md`). Indeks parsial tetap menunggu EXPLAIN ANALYZE atas dataset sintetis representatif. Tidak ada hosted write.
 
-## X6 laporan wali menulis absensi setelah konfirmasi — 20 November 2026 (Codex)
+## X6 laporan wali menulis absensi setelah konfirmasi â€” 20 November 2026 (Codex)
 
 - Migration lokal `20261120050000_guardian_absence_attendance` memperbarui RPC review laporan: keputusan `confirmed` dari guru kelas yang berwenang mencatat status `absent` dengan alasan laporan melalui `school_private.save_attendance()`. Perubahan absensi, revision/audit, dan konfirmasi laporan berada dalam transaksi yang sama.
 - RPC mensyaratkan tepat satu sesi dan catatan roster untuk siswa/tanggal tersebut. Jika tidak ada atau ambigu, error SQLSTATE `55000` membatalkan transaksi dan laporan tetap pending; `needs_revision` tidak mengubah absensi. Pengiriman laporan wali sendiri tetap tidak mengubah absensi.
 - PGlite database test lulus 73/73, mencakup konfirmasi dan audit, stale revision, invalid decision, roster historis yang tidak tersedia (rollback), serta pencabutan relasi wali. Check penuh terbaru ada pada entri X0 di bawah.
 - Tidak ada migration hosted yang diterapkan. Qoder menambahkan UI penanganan SQLSTATE `55000`; tes alur ini lulus desktop/mobile dalam suite penuh.
 
-## X0 dan X11 gerbang lokal — 20 November 2026 (Codex)
+## X0 dan X11 gerbang lokal â€” 20 November 2026 (Codex)
 
 - Setelah integrasi Dashboard ke `dashboard_overview`, penanganan UI laporan wali `55000`, dan indikator pemotongan opsi 1000/200 dari Qoder, `npm run check` Node v24.22.3 kembali lulus EXIT 0: migration 39, check-ci, lint, typecheck, 137/137 tes, build 1.781 modul, audit 26 berkas JS tanpa akun demo.
 - Build memakai URL/key Supabase sintetis proses-lokal; tsbuildinfo dialihkan sementara ke `%TEMP%`, lalu dua tsconfig dipulihkan byte-identik. `dist/` diperbarui dengan izin pemilik. Peringatan chunk PDF 790,69 kB masih ada.
 - Suite browser penuh terkini lulus **304/304** pada desktop/mobile di port 5377 (12,7 menit); log persisten `%TEMP%\\qoder-qa-2026-11-18\\browser-full-55000-5377.log` berakhir EXIT 0. Tes mencakup dashboard RPC, UI error X6, dan opsi referensi terpotong.
 - Branch `ai/qoder-palette-d8` tetap memuat perubahan bersama staged/unstaged; tidak commit, merge, push, deploy, atau mengubah hosted.
 
-## Pemulihan commit UI — 20 November 2026 (Qoder)
+## Pemulihan commit UI â€” 20 November 2026 (Qoder)
 
 - Commit Q15 `80e36e7` (pesan `55000` laporan wali), `6d1082e` (re-audit + `QA_COVERAGE` 304/304), lalu pemeriksaan konsistensi impor relatif atas HEAD.
 - Ditemukan HEAD merujuk berkas yang belum pernah di-commit. Dipulihkan: `src/components/ui/ReferenceNotice.tsx` (`b0e3600`), `src/lib/auth-context.tsx` dan `src/lib/dashboard-overview.ts` (`2ce1ca2`).
@@ -552,40 +564,99 @@ Migration 20261114083827 dan API pesan/penerima dibuat dengan RLS, penugasan dan
 - Wiring tertahan di working tree: `src/app/App.tsx` (rute lazy `/komunikasi`, `/kebiasaan`, `/notifikasi`, `/laporan-ketidakhadiran`), `Communication.tsx`, `NotificationCenter.tsx`, `tests/browser/communication.spec.ts`, `tests/browser/notifications.spec.ts`; menunggu `src/features/notifications/api/index.ts` (X5).
 - Tidak ada perubahan migration, API, atau hosted. Tidak ada klaim branch hijau: working tree tetap sesuai bukti `REAUDIT_HANDOFF_2026-11-20.md` (suite 304/304 port 5377; check EXIT 0 137/137).
 
-## Suite 306/306 dan tes pemotongan Data sekolah — 20 November 2026 (Qoder)
+## Suite 306/306 dan tes pemotongan Data sekolah â€” 20 November 2026 (Qoder)
 
-- `tests/browser/app.spec.ts`: tes baru `master data announces a truncated reference list instead of hiding it` — 1001 referensi siswa memunculkan status `ReferenceNotice` dan tombol tambah relasi tetap aktif; sebelumnya hanya opsi asesmen yang teruji.
-- Run port 5381 menemukan satu kegagalan: assertion `Peran sekolah Anda belum ditetapkan.` melihat fallback Suspense `Memuat halaman…` lebih dari 5 detik pada chunk rute lazy yang masih dingin. Assertion diberi batas 15 detik; uji tunggal lulus 2/2 pada port dingin 5382.
+- `tests/browser/app.spec.ts`: tes baru `master data announces a truncated reference list instead of hiding it` â€” 1001 referensi siswa memunculkan status `ReferenceNotice` dan tombol tambah relasi tetap aktif; sebelumnya hanya opsi asesmen yang teruji.
+- Run port 5381 menemukan satu kegagalan: assertion `Peran sekolah Anda belum ditetapkan.` melihat fallback Suspense `Memuat halamanâ€¦` lebih dari 5 detik pada chunk rute lazy yang masih dingin. Assertion diberi batas 15 detik; uji tunggal lulus 2/2 pada port dingin 5382.
 - Bukti akhir: suite penuh **306/306 lulus** port 5383 (7,3 menit, log `%TEMP%\qoder-qa-2026-11-18\browser-full-5383.log`); `npm run check` EXIT 0 (39 migration, CI, lint, typecheck, 137/137, build 1.781 modul, 26 JS; log `...\check-5383.log`).
 - Tidak ada perubahan migration, API, hosted, atau klaim UAT.
 
-## Suite 308/308 dan tes arsip materi — 20 November 2026 (Qoder)
+## Suite 308/308 dan tes arsip materi â€” 20 November 2026 (Qoder)
 
-- `tests/browser/app.spec.ts`: tes baru `teacher archives a published material after confirmation` — materi terbit diarsipkan lewat dialog konfirmasi; tidak ada PATCH sebelum "Ya, lanjutkan", badan PATCH `{status:'archived'}` dengan `revision=eq.2`, pesan "Materi diarsipkan.", baris berubah menjadi "Diarsipkan", dan tombol arsip hilang. Menutup kesenjangan "arsip oleh guru" di matriks QA.
+- `tests/browser/app.spec.ts`: tes baru `teacher archives a published material after confirmation` â€” materi terbit diarsipkan lewat dialog konfirmasi; tidak ada PATCH sebelum "Ya, lanjutkan", badan PATCH `{status:'archived'}` dengan `revision=eq.2`, pesan "Materi diarsipkan.", baris berubah menjadi "Diarsipkan", dan tombol arsip hilang. Menutup kesenjangan "arsip oleh guru" di matriks QA.
 - Bukti: suite penuh **308/308 lulus** port 5387 (7,0 menit, EXIT 0; log `%TEMP%\qoder-qa-2026-11-18\browser-full-5387.log`); `npm run check` Node v24.22.3 EXIT 0 (39 migration, CI, lint, typecheck, 137/137, build 1.781 modul, 26 JS tanpa akun demo; log `...\check-5387.log`).
 - Tidak ada perubahan migration, API, hosted, atau klaim UAT. Angka kanonik browser kini 308/308; 306/306 port 5383 tetap tercatat sebagai riwayat.
 
-## Suite 310/310 dan tes persetujuan/pengarsipan modul ajar — 20 November 2026 (Qoder)
+## Suite 310/310 dan tes persetujuan/pengarsipan modul ajar â€” 20 November 2026 (Qoder)
 
-- `tests/browser/app.spec.ts`: tes baru `principal approves then archives a submitted teaching module` — kepala sekolah menyetujui modul berstatus `submitted` dengan catatan pemeriksaan, lalu mengarsipkan modul yang sudah `approved`. PATCH disertai `revision=eq.3`; badan pertama `{status:'approved', review_note:'Lengkap dan sesuai.'}`, badan kedua `{status:'archived'}`; baris berubah menjadi "Disetujui" lalu "Diarsipkan". Menutup kesenjangan persetujuan/arsip modul ajar di matriks QA.
+- `tests/browser/app.spec.ts`: tes baru `principal approves then archives a submitted teaching module` â€” kepala sekolah menyetujui modul berstatus `submitted` dengan catatan pemeriksaan, lalu mengarsipkan modul yang sudah `approved`. PATCH disertai `revision=eq.3`; badan pertama `{status:'approved', review_note:'Lengkap dan sesuai.'}`, badan kedua `{status:'archived'}`; baris berubah menjadi "Disetujui" lalu "Diarsipkan". Menutup kesenjangan persetujuan/arsip modul ajar di matriks QA.
 - Run port 5389 tidak valid: server Vite kehabisan heap (`FATAL ERROR: Committing semi space failed`) pada tes ke-43 sehingga sisa tes gagal `ERR_CONNECTION_REFUSED` (42/310). Run diulang dengan `NODE_OPTIONS=--max-old-space-size=4096 --max-semi-space-size=64` di port 5391 dan bersih.
 - Bukti akhir: suite penuh **310/310 lulus** port 5391 (7,8 menit, EXIT 0; log `%TEMP%\qoder-qa-2026-11-18\browser-full-5391.log`); `npm run check` Node v24.22.3 EXIT 0 (39 migration, CI, lint, typecheck, 137/137, build 1.781 modul, audit bundel tanpa akun demo; log `...\check-5391.log`).
 - Tidak ada perubahan migration, API, hosted, atau klaim UAT. Angka kanonik browser kini 310/310; 308/308 port 5387 dan 306/306 port 5383 tetap tercatat sebagai riwayat.
 
-## Suite 312/312 dan pemilih anak untuk wali — 20 November 2026 (Qoder)
+## Suite 312/312 dan pemilih anak untuk wali â€” 20 November 2026 (Qoder)
 
-- `tests/browser/habits.spec.ts`: tes baru `parent with two linked children picks one child and saves for that child only` — wali dengan dua anak melihat pilihan "Pilih murid" berisi dua anak, berganti ke anak kedua (riwayat anak pertama hilang dari daftar), menandai satu kebiasaan, lalu menyimpan. Payload POST hanya berisi `student_id` anak yang dipilih; status berubah menjadi "sudah diisi" setelah muat ulang; tidak ada luapan horizontal di desktop maupun ponsel. Menutup kesenjangan "form wali dengan beberapa anak" di matriks QA dan menguatkan D6 (wali hanya mengisi untuk anak tertaut).
+- `tests/browser/habits.spec.ts`: tes baru `parent with two linked children picks one child and saves for that child only` â€” wali dengan dua anak melihat pilihan "Pilih murid" berisi dua anak, berganti ke anak kedua (riwayat anak pertama hilang dari daftar), menandai satu kebiasaan, lalu menyimpan. Payload POST hanya berisi `student_id` anak yang dipilih; status berubah menjadi "sudah diisi" setelah muat ulang; tidak ada luapan horizontal di desktop maupun ponsel. Menutup kesenjangan "form wali dengan beberapa anak" di matriks QA dan menguatkan D6 (wali hanya mengisi untuk anak tertaut).
 - `tests/browser/app.spec.ts`: tes impor XLSX dibuat tahan terhadap muat ulang Vite. Parser adalah chunk yang dimuat malas; pre-bundling Vite pada unggahan pertama dapat memuat ulang halaman dan menghapus berkas terpilih, sehingga pratinjau tidak pernah tampil (satu kegagalan di run port 5397). Pemilihan berkas kini diulang lewat `expect(...).toPass` sampai pratinjau benar-benar tampil; assertion isi tabel, larangan mutasi sebelum konfirmasi, dan hasil akhir tidak dilonggarkan.
 - Insiden lingkungan (bukan kegagalan aplikasi): run port 5395 tidak valid karena `node_modules` dikosongkan proses instalasi agen lain di tengah run (galat `Cannot find package '@playwright/test'`, 189 tes tidak berjalan). Run diulang setelah dependensi pulih.
 - Bukti akhir: suite penuh **312/312 lulus** port 5401 (8,8 menit, EXIT 0; log `%TEMP%\qoder-qa-2026-11-18\browser-full-5401.log`); `npm run check` Node v24.22.3 EXIT 0 (39 migration, CI, lint, typecheck, 137/137, build 1.781 modul, 26 JS tanpa akun demo; log `...\check-5401.log`).
 - Tidak ada perubahan migration, API, hosted, atau klaim UAT. Angka kanonik browser kini 312/312; 310/310 port 5391, 308/308 port 5387, dan 306/306 port 5383 tetap tercatat sebagai riwayat.
 - Koreksi angka usang (hanya dokumen): `AGENTS.md` bagian "Canonical counts" masih menyebut 127/127, 32 migration, dan 228/228 port 5358; kini menunjuk pasangan kanonik (137/137, 39 migration lokal dengan 16 belum hosted, 312/312 port 5401, log `check-5401.log`/`browser-full-5401.log`) dan menyebut angka lama sebagai riwayat. Daftar migration lokal di baris di atasnya juga diperbarui dari 32/sembilan belum hosted menjadi 39/16 belum hosted. `docs/AI_COORDINATION.md` mendapat catatan supersede di bagian Qoder karena catatan Codex masih menyebut 306/306 port 5383 sebagai angka terbaru, dan `docs/DELIVERY_GATE_2026-11-20.md` mendapat catatan status bahwa angka eksekusinya berasal dari run saat dokumen dibuat. Tidak ada perubahan kode, tes, migration, atau hosted; tidak ada run ulang karena hanya teks dokumen.
 - Tidak ada berkas yang di-commit pada langkah koreksi angka ini: `AGENTS.md`, `AI_COORDINATION.md`, `IMPLEMENTATION_LOG.md`, dan `DELIVERY_GATE_2026-11-20.md` semuanya berada di aliran kerja bersama yang indeksnya berisi berkas staged milik agen lain (`.github/pull_request_template.md`, `package.json`, `playwright.config.ts`, `scripts/*.mjs`, `vite.config.ts`); commit terfokus tidak dapat diambil tanpa menyapu pekerjaan mereka. Dokumen akan ikut ter-commit saat Codex merge.
-- Dua kesenjangan QA yang tidak bisa ditutup dari sisi UI dicatat sebagai "Permintaan Lintas AI" (Qoder → Codex): badge jumlah notifikasi belum dibaca di navigasi (butuh sumber data lintas halaman; `NotificationCenter` hanya menghitung 25 baris halaman aktif) dan ringkasan dashboard guru/wali (`dashboard_overview()` hanya untuk administrator/kepala sekolah). Tidak ada RPC, migration, atau halaman baru ditambahkan.
-- Verifikasi ulang fokus 20 November 2026: `tests/browser/habits.spec.ts` pada working tree bersama (sesudah perubahan backend Codex) 10/10 lulus desktop + ponsel dalam 43,6 detik, EXIT 0, port 5411 (log `%TEMP%\qoder-qa-2026-11-18\habits-5411.log`). Ini bukti fokus, bukan pengganti suite penuh 312/312 port 5401.
-- `AGENTS.md` belum di-commit oleh Qoder: berkas itu memuat bagian "Owner override terbaru — 20 November 2026" yang belum di-commit milik Codex dan menyebut 35 migration lokal/12 belum hosted; angka itu kini 39/16 sehingga perlu diperbarui Codex saat ia meng-commit bagiannya. Perubahan Qoder hanya pada dua baris "Current handoff baseline" (daftar migration dan canonical counts).
+- Dua kesenjangan QA yang tidak bisa ditutup dari sisi UI dicatat sebagai "Permintaan Lintas AI" (Qoder â†’ Codex): badge jumlah notifikasi belum dibaca di navigasi (butuh sumber data lintas halaman; `NotificationCenter` hanya menghitung 25 baris halaman aktif) dan ringkasan dashboard guru/wali (`dashboard_overview()` hanya untuk administrator/kepala sekolah). Tidak ada RPC, migration, atau halaman baru ditambahkan.
+- Verifikasi ulang fokus 20 November 2026: `tests/browser/habits.spec.ts` pada working tree bersama (sesudah perubahan backend Codex) 10/10 lulus desktop + ponsel dalam 43,6 detik, EXIT 0, port 5411 (log `%TEMP%\qoder-qa-2026-11-18\habits-5411.log`). Bukti fokus. Suite penuh terbaru sesudah perubahan berikutnya lulus 402/402; lihat entri paling atas dokumen.
+- `AGENTS.md` belum di-commit oleh Qoder: berkas itu memuat bagian "Owner override terbaru â€” 20 November 2026" yang belum di-commit milik Codex dan menyebut 35 migration lokal/12 belum hosted; angka itu kini 39/16 sehingga perlu diperbarui Codex saat ia meng-commit bagiannya. Perubahan Qoder hanya pada dua baris "Current handoff baseline" (daftar migration dan canonical counts).
 - Rekap minggu ini di 7 Kebiasaan (UI, 20 November 2026): `StudentHabits.tsx` memakai RPC Codex `habit_weekly_summary` yang sudah ada tetapi belum terpakai UI. Bagian "Rekap minggu ini" menampilkan `days_filled`/`days_expected`/`days_missing` dan hitungan per indikator untuk murid terpilih, dengan kalimat "belum diisi, bukan berarti tidak dilakukan" dan "bukan peringkat", tanpa angka lain antarmurid. Status loading, galat dengan tombol coba lagi, dan kosong tersedia. `weekStartOf` menghitung Senin dari `schoolToday()`. Tidak ada perubahan API, migration, atau RPC; kontrak tetap milik Codex.
-- Tes: `tests/browser/habits.spec.ts` menambah tiruan `/rpc/habit_weekly_summary` yang mencatat `target_student` di tiga setup (murid, guru, wali dua anak) dan assertion rekap per murid: 3 dari 5 hari untuk murid uji, 4 dari 5 untuk anak A, 1 dari 5 setelah pindah ke anak B, serta target RPC terakhir `student-two`. Verifikasi: 10/10 desktop + ponsel, 20,3 dtk, EXIT 0, port 5413 (log `%TEMP%\qoder-qa-2026-11-18\habits-5413.log`); `npx tsc --noEmit` dan `eslint` pada berkas yang diubah bersih. Ini bukti fokus, bukan pengganti suite penuh 312/312 port 5401 yang dijalankan sebelum perubahan ini.
+- Tes rekap habits historical: `tests/browser/habits.spec.ts` menambah tiruan; suite penuh terbaru setelah skenario ini lulus 402/402 (lihat entri paling atas).
 - `npm run check` Node v24.22.3 EXIT 0 pada working tree ini: `Migration OK: 39 berkas`, lint, typecheck, 137/137 tes unit/database, build 1.781 modul, `Bundel produksi OK: 26 berkas JavaScript tanpa akun demo` (log `%TEMP%\qoder-qa-2026-11-18\check-habits-weekly.log`). Run suite penuh ulang pada port 5415 dihentikan sebelum selesai karena laju ~3 dtk/tes (dugaan beban dari proses lain di worktree bersama); angka kanonik browser tetap 312/312 port 5401 dan tidak diklaim ulang.
 - Commit Qoder `6d7563c` (branch `ai/qoder-palette-d8`) memuat `StudentHabits.tsx`, `habits.spec.ts`, `QA_COVERAGE.md`, `PROJECT_STATUS.md`, `IMPLEMENTATION_LOG.md`, dan `AI_COORDINATION.md` lewat `git commit --only`; indeks staged milik agen lain tidak disentuh. `docs/DELIVERY_GATE_2026-11-20.md` masih untracked sehingga belum bisa ikut lewat `--only`.
-- Kepatuhan R-02 diperbaiki (20 November 2026): legenda formulir di `StudentHabits.tsx` memakai em dash (`Catatan harian — ...`), satu-satunya karakter em dash di `src` dan bertentangan dengan klaim gate. Diganti titik dua (`Catatan harian: ...`); enam assertion `habits.spec.ts` disesuaikan. `grep` em dash pada `src` kini kosong. Verifikasi ulang: 10/10 desktop + ponsel, 1,3 menit, EXIT 0, port 5417 (log `%TEMP%\qoder-qa-2026-11-18\habits-5417.log`).
+- Kepatuhan R-02 diperbaiki (20 November 2026): legenda formulir di `StudentHabits.tsx` memakai em dash (`Catatan harian â€” ...`), satu-satunya karakter em dash di `src` dan bertentangan dengan klaim gate. Diganti titik dua (`Catatan harian: ...`); enam assertion `habits.spec.ts` disesuaikan. `grep` em dash pada `src` kini kosong. Verifikasi ulang: 10/10 desktop + ponsel, 1,3 menit, EXIT 0, port 5417 (log `%TEMP%\qoder-qa-2026-11-18\habits-5417.log`).
+
+## Codex â€” Gerbang demo dan kontrak backend â€” 20 November 2026
+
+- `docs/API_CONTRACT.md` merangkum tipe dan fungsi komunikasi, dokumen, notifikasi, laporan absensi wali, absensi guru, 7 Kebiasaan, serta `dashboard_overview()`.
+- `src/lib/config.ts` mengekspor `isConfigured` dan `demoAllowed` sebagai sumber tunggal runtime. Build produksi mewajibkan URL Supabase dan key `sb_publishable_`; demo dimuat dinamis hanya saat `import.meta.env.DEV`. Fixture akun tinggal di `tests/fixtures/`.
+- `prebuild` menjalankan `scripts/guard-env.mjs`; `CI_FIXTURE=1` hanya diterima di GitHub Actions dengan konfigurasi sintetis tetap. Audit bundel memeriksa asset produksi terhadap ID/email/password fixture.
+- Bukti: `npm run check` Node v24.22.3 EXIT 0, **140/140 tes**, 38 migration, workflow CI/lint/typecheck, build 1.787 modul, audit 29 JavaScript tanpa akun demo. `dist/` dibangun ulang memakai konfigurasi sintetis proses-lokal. Peringatan chunk PDF 790,69 kB.
+- Migration `20261114083828_security_foundation.sql` menggabungkan guard/drop `todos`, policy draft author-only, FK `profile_id ON DELETE SET NULL`, dan review RPC `habit_students()`. Tes PGlite penuh pada tree ini lulus melalui gate tersebut. Tidak ada migration hosted diterapkan.
+- Browser run terakhir 308/312; empat kegagalan sebelumnya (tiga trace ENOENT, satu `ERR_INSUFFICIENT_RESOURCES`) perlu suite ulang sebelum integrasi. Hosted tertahan WARN `auth_leaked_password_protection`; tidak ada deploy atau merge.
+
+## Codex phase 0 audit - 21 November 2026
+
+- Branch ai/codex-foundation; S0 contract, demoAllowed/isConfigured exports, and seven reference documents are present. Dependencies already exist; npm ci was unnecessary.
+- Node v24.22.3. npm run check EXIT 0: migration/CI guards, lint, typecheck, unit and database tests passed; isolated build transformed 1,789 modules and 30 JavaScript bundles had no demo accounts. See AGENTS.md for the canonical test count.
+- check uses build:isolated and dist-check; release build still targets dist. Isolation avoids Vite EPERM while clearing dist/assets. PDF chunk warning remains at 790.69 kB.
+- S1 passed locally. S2 still needs per-item audit; S3 awaits a clean Security Advisor. No hosted write, merge, or deploy.
+- Browser suite full on Node 24, port 5191, one worker: every reported case returned `ok` on desktop and mobile, including the new module pagination cases. The runner hung during cleanup after the final case; CPU stayed unchanged for 20 seconds, then Ctrl+C ended the session with exit 1. This is not a clean suite exit. APIs were mocked; this is not school-account UAT.
+- Hosted read-only recheck: 23 migrations remain through `20261113074045`; Security Advisor still reports one external WARN, `auth_leaked_password_protection`. No hosted changes were made; Fase 4 awaits the owner checklist step to enable leaked-password protection and a clean Advisor result.
+
+## Audit Codex Fase 3 backend - 21 November 2026
+
+- S0 API contract diperiksa terhadap API TypeScript komunikasi, dokumen, notifikasi, laporan wali, absensi guru, kebiasaan, dan dashboard; semua modul menyediakan pagination sentinel `hasMore` sesuai kontrak. Kontrak diperjelas dengan pembatasan role dokumen dan absensi guru dari keputusan fitur fondasi.
+- Migration lokal menyediakan habits + rekap mingguan, komunikasi, dokumen/kategori/versi/review + bucket privat, notifikasi/event fanout, laporan wali + konfirmasi absensi, check-in/out guru dengan `request_id` idempoten, dan RPC dashboard. `dashboard_overview()` memiliki dua partial index untuk status modul submitted/returned; migration mencatat hasil EXPLAIN ANALYZE PGlite atas 50.000 baris sintetis.
+- Bukti PGlite yang diperiksa: school-documents memeriksa bucket privat, limit 10 MiB/MIME dan akses pemilik/kepala/admin; supervision-evidence memeriksa principal, guru pemilik sebelum/sesudah publikasi, guru lain, siswa, wali, pending, anonim, dan path cacat; absensi guru memeriksa retry idempoten, privasi, serta hanya principal menyetujui koreksi. Ini simulasi lokal, bukan validasi Supabase hosted.
+- Verifikasi browser penuh pada port 5191 melaporkan setiap case `ok`, termasuk pagination baru, namun runner macet saat cleanup; CPU tak berubah 20 detik dan dihentikan dengan Ctrl+C (exit 1). Tidak dihitung sebagai suite penuh bersih. API browser memakai mock.
+- `git diff --check` pada `docs/DECISIONS.md` dan `docs/API_CONTRACT.md` bersih. Tidak menjalankan ulang `npm run check` karena perubahan sesi ini hanya dokumentasi; hasil Node 24 terdahulu dicatat di AGENTS.md.
+- Fase 4 belum boleh berjalan: hosted masih 23 migration sampai `20261113074045`, dan Security Advisor memiliki WARN `auth_leaked_password_protection`. Backup/restore teruji, Supabase lokal, serta `check:supabase` juga belum tersedia/terbukti; tidak ada hosted write, merge, atau deploy.
+
+## Verifikasi Codex lanjutan - 21 November 2026
+
+- `npm run check` Node v24.22.3 dijalankan ulang berurutan: EXIT 0; 38 migration, workflow CI, lint, typecheck, dan 140/140 tes lulus; build isolated mentransformasi 1.789 modul dan audit menyatakan 30 JavaScript tanpa akun demo. Peringatan chunk PDF 790,69 kB.
+- Browser full run bersih kemudian lulus **420/420**, EXIT 0 dalam 7,1 menit (port 5191, satu worker, trace off, desktop+mobile). Untuk menghindari Vite child yang tertinggal saat cleanup pada konfigurasi default, Vite dijalankan terpisah dan direuse oleh config sementara. Ringkasan terminal dicatat di `docs/logs/browser-full-2026-11-21-port5191-reuse.log`; API seluruhnya mock, bukan UAT sekolah. Ini supersedes percobaan pertama yang tidak clean.
+- `AGENTS.md` diselaraskan dengan keputusan owner 20 November: Next.js dilarang; baseline hosted/lokal diperbarui ke 23/38 migration dan gerbang hosted aktif. `docs/PROJECT_STATUS.md` menandai 402/402 sebagai historis, bukan verifikasi tree terkini. Release build `dist/` kemudian berhasil pada 21 November (lihat pembaruan build release di atas).
+- Git lokal berada pada `ai/codex-foundation` tanpa remote terkonfigurasi; 163 path memiliki perubahan staged/unstaged/untracked campuran lintas pekerjaan. GitHub read-only mengonfirmasi repo `mariomagfii-sys/si-stir-hebat` dengan default branch `main`, tanpa branch remote `ai/codex-foundation` atau PR terbuka. Tidak aman menyapu perubahan campuran ke commit/merge.
+- Tidak ada perubahan migration hosted, merge, push, atau deploy. Fase 4 tertahan oleh Advisor WARN `auth_leaked_password_protection`, DNS `ENOTFOUND` pada `check:supabase`, serta belum adanya bukti Supabase lokal dan backup/restore teruji. Konektor Supabase yang tersedia tidak menyediakan penulis Auth settings; checklist owner meminta pengaktifan perlindungan kata sandi bocor.
+## Verifikasi fase fondasi - 21 November 2026
+
+- `npm run check` Node v24.22.3 EXIT 0: 38 migration, workflow CI, lint, typecheck, **140/140** tes unit/database, build terisolasi 1.789 modul, audit **30 JavaScript tanpa akun demo**. Log `docs/logs/check-2026-11-21-node24.log`; peringatan chunk PDF 790,69 kB. Output `dist-check`; release `dist` tidak diubah.
+- `npm run check:supabase` read-only tidak mencapai endpoint: config valid dan hostname cocok dengan project tersambung, DNS lookup gagal `ENOTFOUND`. Tidak ada nilai URL/key ditampilkan dan tidak ada baris data dibaca. Log `docs/logs/check-supabase-2026-11-20.log` merekam percobaan sebelumnya dengan pesan generik; diagnosis kode DNS dilakukan 21 Nov.
+- Supabase MCP read-only 21 Nov 08:52 WIB: 23 migration hosted sampai `20261113074045`; Security Advisor satu WARN `auth_leaked_password_protection`. Tidak ada hosted write.
+- Browser run pada konfigurasi default sebelumnya mencapai case terakhir tetapi runner cleanup berhenti tanpa summary; hasil tersebut digantikan oleh run bersih 420/420 yang dicatat di entri Codex berikutnya. Saat entri ini ditulis build release, merge, deploy, dan UAT tetap tertunda; build release berhasil pada pembaruan 21 November di bawah.
+## Build release dan sinkronisasi bukti — 21 November 2026
+
+- `npm run build` Node v24.22.3 EXIT 0: `prebuild` guard valid, Vite membangun 1.789 modul dan mengganti `dist/`; audit produksi memeriksa 30 bundel JavaScript tanpa akun demo. Peringatan chunk PDF 790,69 kB. Konfigurasi publishable sintetis hanya ada di environment proses dan dibersihkan sesudah perintah.
+- `npm run check` tetap menjadi bukti kanonik di `docs/logs/check-2026-11-21-node24.log`: 140/140 tes unit/database, lint/typecheck dan isolated build lulus. Suite browser terbaru 420/420 EXIT 0 menggunakan Vite eksternal; rinciannya di `docs/logs/browser-full-2026-11-21-port5191-reuse.log`.
+- Catatan koordinasi diselaraskan dari percobaan browser 402/420 sebelumnya ke bukti 420/420. `check:supabase` tetap tertahan sebelum HTTP Auth oleh DNS `ENOTFOUND`; ringkasan tanpa nilai konfigurasi di `docs/logs/check-supabase-diagnostic-2026-11-21.log`.
+- Tidak ada migration hosted, deploy, commit, merge, atau push. Hosted tetap tertahan oleh Security Advisor WARN, `check:supabase`/DNS, Supabase lokal dan bukti backup/restore.
+# Konfigurasi sekolah - migration lokal - 21 November 2026
+
+- Ditambahkan `20261121090000_school_configuration.sql`: KKM, kebijakan retensi, katalog status absensi guru, jenis dokumen guru, kalender sekolah, dan permintaan penghapusan. Semua tabel publik ber-RLS, akses anon ditolak, grants dibatasi, dan operasi keputusan/pencatatan permintaan penghapusan memakai RPC dengan pemisahan kepala sekolah dan administrator.
+- Nilai retensi mengikuti D5: bukti supervisi 2 tahun ajaran; `action='delete'` hanya nilai kebijakan untuk proses manual dan tidak memicu penghapusan otomatis. RPC `execute_deletion_request` hanya mencatat pelaksanaan; ia tidak menghapus data.
+- Test PGlite dari lampiran disalin ke `tests/school-configuration.test.mjs` dengan koreksi retensi D5 dan fixture izin baca profil. Fokus 9/9 lulus. `npm run check` Node v24.22.3 EXIT 0, 149/149 tes, 39 migration, lint/typecheck, build terisolasi 1.789 modul, 30 bundel JavaScript tanpa akun demo. Peringatan chunk PDF 790,69 kB.
+- Hosted tidak berubah: read-only terakhir mencatat 23 migration; kini 16 migration lokal belum hosted. Advisor masih WARN `auth_leaked_password_protection`; migration ini tidak boleh diterapkan sebelum seluruh gerbang hosted lulus.
+
+
+## Revisi retensi bukti supervisi - 21 November 2026
+
+- Pemilik menetapkan retensi bukti supervisi 1 tahun ajaran, menggantikan nilai D5 sebelumnya (2 tahun). Seed migration `20261121090000_school_configuration.sql`, assertion test PGlite, `docs/DECISIONS.md`, dan `docs/PROSEDUR_RETENSI_OPERATOR.md` telah diselaraskan.
+- Hosted belum berubah; migration konfigurasi sekolah masih lokal. Tidak ada penghapusan otomatis.

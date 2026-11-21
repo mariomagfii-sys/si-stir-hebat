@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { canReadMasterData } from '../features/school/master'
 import { canReadAnnouncements } from '../lib/announcements'
-import { getDemoProfile, isDemoModeEnabled } from '../lib/demo-auth'
-import { canAccessCommunication, canReadAssessments, canReadAttendance, canReadJournals, canReadLearning, canReadSchedules } from '../lib/school'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/auth-context'
+import { canAccessCommunication, canReadAbsenceReports, canReadAccountLinks, canReadAssessments, canReadAttendance, canReadGuardianPortal, canReadHabits, canReadJournals, canReadLearning, canReadNotifications, canReadSchedules, canReadSchoolDocuments, canReadSupervision, canReadTeacherAttendance, canReadTeachingModules } from '../utils/permissions'
+import { useAuth } from '../components/auth/auth-context'
 
 type NavItem = { to: string; label: string }
 
@@ -16,20 +15,22 @@ function navItems(role: string | null): NavItem[] {
   ]
   if (canReadMasterData('school_settings', role)) items.push({ to: '/sekolah', label: 'Data sekolah' })
   if (canReadAttendance(role)) items.push({ to: '/absensi', label: 'Absensi' })
+  if (canReadTeacherAttendance(role)) items.push({ to: '/absensi-guru', label: 'Absensi guru' })
   if (canReadJournals(role)) items.push({ to: '/jurnal', label: 'Jurnal' })
-  if (canReadJournals(role)) items.push({ to: '/modul-ajar', label: 'Modul Ajar' })
+  if (canReadTeachingModules(role)) items.push({ to: '/modul-ajar', label: 'Modul Ajar' })
   if (canReadLearning(role)) items.push({ to: '/materi', label: 'Materi Kelas' })
   if (canReadLearning(role)) items.push({ to: '/tugas', label: 'Tugas Kelas' })
   if (canReadAssessments(role)) items.push({ to: '/asesmen', label: 'Asesmen' })
   if (canReadSchedules(role)) items.push({ to: '/jadwal', label: 'Jadwal' })
   if (canAccessCommunication(role)) items.push({ to: '/komunikasi', label: 'Komunikasi' })
-  if (role === 'principal' || role === 'teacher') items.push({ to: '/supervisi', label: 'Supervisi' })
+  if (canReadSupervision(role)) items.push({ to: '/supervisi', label: 'Supervisi' })
   if (canReadAnnouncements(role)) items.push({ to: '/pengumuman', label: 'Pengumuman' })
-  if (role === 'administrator') items.push({ to: '/tautan-akun', label: 'Tautan akun' })
-  if (role === 'parent') items.push({ to: '/ruang-orang-tua', label: 'Ruang Orang Tua' })
-  if (role === 'parent' || role === 'teacher') items.push({ to: '/laporan-ketidakhadiran', label: 'Laporan ketidakhadiran' })
-  if (['student', 'parent', 'teacher', 'principal', 'administrator'].includes(role ?? '')) items.push({ to: '/notifikasi', label: 'Notifikasi' })
-  if (['student', 'parent', 'teacher', 'principal', 'administrator'].includes(role ?? '')) items.push({ to: '/kebiasaan', label: '7 Kebiasaan' })
+  if (canReadSchoolDocuments(role)) items.push({ to: '/dokumen', label: 'Dokumen sekolah' })
+  if (canReadAccountLinks(role)) items.push({ to: '/tautan-akun', label: 'Tautan akun' })
+  if (canReadGuardianPortal(role)) items.push({ to: '/ruang-orang-tua', label: 'Ruang Orang Tua' })
+  if (canReadAbsenceReports(role)) items.push({ to: '/laporan-ketidakhadiran', label: 'Laporan ketidakhadiran' })
+  if (canReadNotifications(role)) items.push({ to: '/notifikasi', label: 'Notifikasi' })
+  if (canReadHabits(role)) items.push({ to: '/kebiasaan', label: '7 Kebiasaan' })
   items.push({ to: '/akun', label: 'Akun' })
   return items
 }
@@ -43,10 +44,6 @@ function useRole(userId: string | null) {
       return
     }
     const client = supabase
-    if (isDemoModeEnabled()) {
-      setRole(getDemoProfile(userId)?.role ?? null)
-      return
-    }
     if (!client) {
       setRole(null)
       return

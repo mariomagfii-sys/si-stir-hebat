@@ -1134,15 +1134,18 @@ test('xlsx retry reuses the same request after an uncertain response',async({pag
   await expect(page.getByText('retry.xlsx',{exact:true})).toHaveCount(1)
 })
 
-for (const { role, attendance, journals } of [
-  { role: 'teacher', attendance: true, journals: true },
-  { role: 'student', attendance: true, journals: false },
-  { role: 'parent', attendance: false, journals: false },
+for (const { role, attendance, journals, learning } of [
+  { role: 'teacher', attendance: true, journals: true, learning: true },
+  { role: 'student', attendance: true, journals: false, learning: true },
+  { role: 'parent', attendance: false, journals: false, learning: true },
+  { role: 'administrator', attendance: true, journals: true, learning: false },
+  { role: 'principal', attendance: true, journals: true, learning: false },
 ]) {
   test(`main navigation follows the ${role} profile`, async ({ page }) => {
     await mockSchool(page, { role })
     await page.goto('/')
     const mobile = (page.viewportSize()?.width ?? 1280) < 1000
+    const learningLinks = ['Materi Kelas', 'Tugas Kelas', 'Asesmen']
     if (mobile) {
       const quick = page.getByRole('navigation', { name: 'Navigasi cepat' })
       await expect(quick.getByRole('link', { name: 'Beranda', exact: true })).toHaveAttribute('aria-current', 'page')
@@ -1154,6 +1157,7 @@ for (const { role, attendance, journals } of [
       await expect(drawer.getByRole('link', { name: 'Pengumuman', exact: true })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Absensi', exact: true })).toHaveCount(Number(attendance))
       await expect(page.getByRole('link', { name: 'Jurnal', exact: true })).toHaveCount(Number(journals))
+      for (const label of learningLinks) await expect(page.getByRole('link', { name: label, exact: true })).toHaveCount(Number(learning))
       await page.keyboard.press('Escape')
       await expect(drawer).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Lainnya', exact: true })).toBeFocused()
@@ -1162,6 +1166,7 @@ for (const { role, attendance, journals } of [
       await expect(navigation.getByRole('link', { name: 'Pengumuman', exact: true })).toBeVisible()
       await expect(navigation.getByRole('link', { name: 'Absensi', exact: true })).toHaveCount(Number(attendance))
       await expect(navigation.getByRole('link', { name: 'Jurnal', exact: true })).toHaveCount(Number(journals))
+      for (const label of learningLinks) await expect(navigation.getByRole('link', { name: label, exact: true })).toHaveCount(Number(learning))
       await expect(navigation.getByRole('link', { name: 'Beranda', exact: true })).toHaveAttribute('aria-current', 'page')
     }
   })
@@ -1629,15 +1634,23 @@ test('schedule class filter queries server across pages and distinguishes school
   await expect(page.getByRole('button', { name: /Lihat riwayat/ })).toHaveCount(0)
 })
 
-for (const role of ['administrator', 'teacher', 'parent', 'pending']) {
+for (const role of ['administrator', 'principal', 'teacher', 'student', 'parent', 'pending']) {
   test(`release dashboard services follow ${role} access`, async ({ page }, testInfo) => {
     await mockSchool(page, { role })
     await page.goto('/dashboard')
     const services = page.getByRole('region', { name: 'Akses cepat' })
+    const staff = ['administrator', 'principal', 'teacher'].includes(role)
+    const learns = ['teacher', 'student', 'parent'].includes(role)
     if (role === 'pending') await expect(services.getByRole('link', { name: /Jadwal pelajaran/ })).toHaveCount(0)
     else await expect(services.getByRole('link', { name: /Jadwal pelajaran/ })).toBeVisible()
     await expect(services.getByRole('link', { name: /Siapkan data sekolah/ })).toHaveCount(role === 'administrator' ? 1 : 0)
     await expect(services.getByRole('link', { name: /Kehadiran anak/ })).toHaveCount(role === 'parent' ? 1 : 0)
+    for (const name of [/Materi kelas/, /Tugas kelas/, /Asesmen dan nilai/]) {
+      await expect(services.getByRole('link', { name })).toHaveCount(learns ? 1 : 0)
+    }
+    for (const name of [/Dokumen sekolah/, /Absensi guru/]) {
+      await expect(services.getByRole('link', { name })).toHaveCount(staff ? 1 : 0)
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     if (role === 'administrator') await page.screenshot({ path: testInfo.outputPath('dashboard-release.png'), fullPage: true })
   })

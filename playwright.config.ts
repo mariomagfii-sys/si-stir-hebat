@@ -12,7 +12,7 @@ export default defineConfig({
     baseURL,
     browserName: 'chromium',
     channel: process.env.PLAYWRIGHT_CHANNEL || (process.platform === 'win32' ? 'msedge' : undefined),
-    trace: 'retain-on-failure',
+    trace: 'off',
   },
   projects: [
     { name: 'desktop', use: { viewport: { width: 1280, height: 900 } } },
@@ -22,6 +22,6 @@ export default defineConfig({
     command: `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${port} --strictPort`,
     url: baseURL,
     reuseExistingServer: false,
-    env: { VITE_SUPABASE_URL: 'https://example.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_browser_test_only' },
+    env: { VITE_SUPABASE_URL: 'https://school-abc.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abcdefghijklmnopqrstuv_12345678', VITE_TEST_NO_WATCH: '1' },
   },
 })

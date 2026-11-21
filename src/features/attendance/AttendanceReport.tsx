@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
 import { createCsv, downloadCsv } from '../../utils/csv'
-import { schoolToday } from './attendance-model'
+import { schoolToday } from '../../utils/date'
 import { summarizeReport, validateReportRange, type ReportRecord } from './report-model'
 
 type Choice = { id: string; label: string }
@@ -89,7 +89,7 @@ export function AttendanceReport({ classes }: { classes: Choice[] }) {
           </button>
         </div>
         {exportError && <ErrorNotice>{exportError}</ErrorNotice>}
-        <div className="table-scroll"><table><caption>Rekap per siswa pada rentang terpilih</caption><thead><tr>{['Kode','Nama snapshot terakhir','Hadir','Sakit','Izin','Alpa','Belum diisi','Catatan terlihat'].map(label=><th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{result.rows.map(row=><tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td>{row.present}</td><td>{row.sick}</td><td>{row.excused}</td><td>{row.absent}</td><td>{row.unmarked}</td><td>{row.total}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll" role="region" aria-label="Tabel rekap absensi yang dapat digeser" tabIndex={0}><table><caption>Rekap per siswa pada rentang terpilih</caption><thead><tr>{['Kode','Nama snapshot terakhir','Hadir','Sakit','Izin','Alpa','Belum diisi','Catatan terlihat'].map(label=><th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{result.rows.map(row=><tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td>{row.present}</td><td>{row.sick}</td><td>{row.excused}</td><td>{row.absent}</td><td>{row.unmarked}</td><td>{row.total}</td></tr>)}</tbody></table></div>
       </>}
     </>}
   </section>

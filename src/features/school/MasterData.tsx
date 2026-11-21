@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, NavLink, useParams } from 'react-router-dom'
-import { useAuth } from '../../lib/auth-context'
+import { useAuth } from '../../components/auth/auth-context'
 import { supabase } from '../../lib/supabase'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
 import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { canReadMasterData, masterDefinitions, masterPayload, validateMaster, type MasterKind, type MasterRow, type ReferenceTable } from './master'
 import { createCsv, downloadCsv } from '../../utils/csv'
+import { isAdministrator, isPending, isPrincipal, isTeacher } from '../../utils/permissions'
 
 const pageSize = 20
 
@@ -34,7 +35,7 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
   const [values, setValues] = useState<Record<string, string>>({})
   const [confirming, setConfirming] = useState(false)
   const [referencesTruncated, setReferencesTruncated] = useState(false)
-  const canWrite = role === 'administrator'
+  const canWrite = isAdministrator(role)
   const requiresYear = definition.fields.some(field => field.type === 'year' || field.reference === 'school_classes')
   const referenceTables = definition.fields.flatMap(field => field.reference ? [field.reference] : [])
   const missingReferences = referenceTables.some(table => !references[table]?.some(row => row.is_active))
@@ -175,8 +176,8 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
     <h2>{definition.label}</h2>
     {message && <p className="status" role="status">{message}</p>}
     <ReferenceNotice truncated={referencesTruncated}/>
-    {loading ? <LoadingState/> : error ? <ErrorNotice onRetry={() => setAttempt(value => value + 1)}>{error}</ErrorNotice> : !canReadMasterData(kind, role) ? <EmptyState>{role === 'pending' || !role ? 'Peran sekolah Anda belum ditetapkan. Hubungi administrator untuk akses data sekolah.' : 'Anda tidak memiliki izin untuk membuka jenis data ini.'}</EmptyState> : <>
-      {(kind === 'teachers' || kind === 'students') && <p className="status">{canWrite ? 'Catat data resmi sekolah menggunakan kode internal yang unik. Pencatatan ini tidak membuat akun login atau mengubah peran pengguna.' : role === 'principal' ? 'Daftar ini hanya dapat dibaca. Perubahan dilakukan oleh administrator.' : role === 'teacher' && kind === 'students' ? 'Hanya siswa aktif dalam kelas yang ditugaskan kepada Anda yang ditampilkan.' : 'Hanya data yang telah dihubungkan dengan akun Anda yang ditampilkan.'}</p>}
+    {loading ? <LoadingState/> : error ? <ErrorNotice onRetry={() => setAttempt(value => value + 1)}>{error}</ErrorNotice> : !canReadMasterData(kind, role) ? <EmptyState>{isPending(role) ? 'Peran sekolah Anda belum ditetapkan. Hubungi administrator untuk akses data sekolah.' : 'Anda tidak memiliki izin untuk membuka jenis data ini.'}</EmptyState> : <>
+      {(kind === 'teachers' || kind === 'students') && <p className="status">{canWrite ? 'Catat data resmi sekolah menggunakan kode internal yang unik. Pencatatan ini tidak membuat akun login atau mengubah peran pengguna.' : isPrincipal(role) ? 'Daftar ini hanya dapat dibaca. Perubahan dilakukan oleh administrator.' : isTeacher(role) && kind === 'students' ? 'Hanya siswa aktif dalam kelas yang ditugaskan kepada Anda yang ditampilkan.' : 'Hanya data yang telah dihubungkan dengan akun Anda yang ditampilkan.'}</p>}
       {canWrite && !editing && (kind !== 'school_settings' || rows.length === 0) && <button className="button" onClick={() => openEditor('new')} disabled={(requiresYear && years.length === 0) || missingReferences}>Tambah {definition.singular}</button>}
       {canWrite && missingReferences && <p className="status">Lengkapi data siswa/guru, kelas dan mata pelajaran yang aktif sebelum menambahkan relasi ini.</p>}
       {referenceTables.length > 0 && <p className="help">Untuk perpindahan atau perubahan penugasan, nonaktifkan relasi lama lalu tambahkan relasi baru. Pilihan pada relasi yang sudah disimpan tetap dipertahankan.</p>}

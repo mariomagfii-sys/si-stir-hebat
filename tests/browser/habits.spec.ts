@@ -177,6 +177,28 @@ async function setupTeacher(page: Page, record: HabitRow) {
   return { revisions, bodies }
 }
 
+test('pending account cannot open habits', async ({ page }) => {
+  let rosterCalls = 0
+  await installSession(page)
+  await page.route('https://school-abc.supabase.co/**', route => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const json = (data: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) })
+    if (url.pathname.endsWith('/user')) return json({ user })
+    if (url.pathname.endsWith('/profiles')) return json([{ role: 'pending' }])
+    if (url.pathname.endsWith('/rpc/habit_students') || url.pathname.endsWith('/rpc/habit_weekly_summary')) {
+      rosterCalls += 1
+      return json([])
+    }
+    throw new Error(`Permintaan Supabase tidak dikenal: ${request.method()} ${url.pathname}`)
+  })
+
+  await page.goto('/kebiasaan')
+  await expect(page.getByText('Halaman kebiasaan tidak tersedia untuk peran ini.')).toBeVisible()
+  await expect(page.getByRole('link', { name: '7 Kebiasaan' })).toHaveCount(0)
+  expect(rosterCalls).toBe(0)
+})
+
 test('student taps habits and saves a daily record', async ({ page }) => {
   const state = await setupStudent(page)
 

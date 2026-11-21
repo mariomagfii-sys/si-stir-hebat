@@ -4,7 +4,7 @@ Aplikasi sekolah SDN 03 Wonosari menggunakan React, Vite, TypeScript, dan Supaba
 
 ## Status saat ini
 
-Alur yang tersedia: autentikasi/profil, dashboard peran, pengumuman, data sekolah, registri guru/siswa, keanggotaan kelas, penugasan guru, absensi manual/impor Excel, jurnal, tautan akun terverifikasi, portal kehadiran wali, modul ajar, supervisi empat tahap dengan bukti privat, materi/tugas, pengumpulan dan umpan balik, serta asesmen dengan publikasi dan koreksi beralasan. Rekap akademik mendukung filter, CSV/Excel/PDF dan grafik perkembangan. Cakupan dan batas verifikasi tiap modul ada dalam status proyek; komunikasi, administrasi dokumen, dan sejumlah kebutuhan PRD masih terbuka. Modul kebiasaan siswa belum memiliki UI dan migration-nya belum diterapkan ke hosted.
+Alur yang tersedia: autentikasi/profil, dashboard per peran (termasuk ringkasan `dashboard_overview()`), pengumuman, data sekolah, registri guru/siswa, keanggotaan kelas, penugasan guru, absensi manual/impor Excel, jurnal, tautan akun terverifikasi, portal kehadiran wali, laporan ketidakhadiran wali, modul ajar, supervisi empat tahap dengan bukti privat, materi/tugas, pengumpulan dan umpan balik, komunikasi guru–wali, pusat notifikasi, 7 Kebiasaan beserta rekap mingguan, administrasi dokumen dengan versi/review, absensi guru dengan persetujuan koreksi, serta asesmen dengan publikasi dan koreksi beralasan. Rekap akademik mendukung filter, CSV/Excel/PDF dan grafik perkembangan. Cakupan dan batas verifikasi tiap modul ada dalam status proyek. Beberapa migration modul baru belum hosted, dan UAT akun sekolah belum dilakukan.
 
 ## Batas proyek untuk Codex
 
@@ -12,7 +12,7 @@ Folder ini adalah root utama SI STIR HEBAT. Aplikasi utamanya tetap React/Vite; 
 
 Laporan rinci: [Status proyek](docs/PROJECT_STATUS.md), [Log implementasi](docs/IMPLEMENTATION_LOG.md), [Keputusan sementara](docs/DECISIONS.md), [Telaah keamanan migration](docs/SECURITY_REVIEW.md), dan [Panduan UAT](docs/PANDUAN_UAT.md). Tujuh dokumen acuan tersedia sebagai Markdown di [`docs/references/`](docs/references/README.md), lengkap dengan hash dan hierarki otoritas; salinan tersebut belum disahkan sebagai acuan resmi. Skema nilai maksimum per asesmen dan publikasi manual guru merupakan keputusan sementara; skema resmi akan diberikan pengguna. Tidak ada perhitungan rapor otomatis.
 
-Koneksi Supabase sudah dikonfigurasi di workspace ini. Email login aktif. Dua puluh tiga migration terkonfirmasi diterapkan hingga 13 November 2026:
+Koneksi Supabase sudah dikonfigurasi di workspace ini. Email login aktif. Dua puluh tiga migration terkonfirmasi diterapkan hingga 13 November 2026; repository kini memuat **38 berkas migration lokal** menurut `node scripts/check-migrations.mjs` (laporan Codex menyebut 39; selisih belum dijelaskan), sehingga 15 berkas belum hosted. Jangan menganggap berkas lokal sudah diterapkan:
 
 | Versi | Migration |
 | --- | --- |
@@ -193,7 +193,7 @@ npx playwright install chromium
 
 Pada Windows, gunakan `$env:PLAYWRIGHT_CHANNEL='chromium'` untuk memilih Chromium yang dipasang Playwright. Pada CI Linux, browser dipasang otomatis. Pengujian browser tiruan tidak menggantikan pengujian email dan login Supabase sungguhan.
 
-Baseline 15 November 2026: 109 tes unit/database; lint, TypeScript, dan build lulus pada run terakhir yang tercatat. Laporan Kilo menyebut 194 skenario browser lulus dengan API tiruan; angka 104 tes dan 180 skenario pada catatan lama adalah riwayat. Tugas dokumentasi ini tidak menjalankan ulang suite. Build masih memperingatkan chunk PDF berukuran besar. `npm run check:supabase` pada 14 November 2026 mengonfirmasi Auth aktif dan penolakan akses anonim pada tabel yang diperiksa, tanpa membaca baris. Pengujian akun sekolah nyata belum dilakukan. Workflow GitHub Actions tersedia di `.github/workflows/verify.yml`; workflow belum diverifikasi pada GitHub.
+Baseline 20 November 2026: `npm run check` pada Node v24.22.3 EXIT 0 dengan **140/140 tes unit/database**, lint, typecheck, build 1.787 modul, dan audit bundel 29 JavaScript tanpa akun demo. Suite browser penuh terakhir yang tercatat Qoder **312/312 lulus** (port 5401, 8,8 menit) dengan API tiruan, tetapi run Codex pada tree ini **308/312** dengan empat kegagalan yang belum ditriase; angka 312 karena itu historis sampai ada run ulang yang hijau. Rincian di [cakupan uji](docs/QA_COVERAGE.md). Angka 109 tes, 137/137, 194/216, 228/228, dan 306/306 adalah riwayat, bukan status terkini. Build masih memperingatkan chunk PDF besar. `npm run check:supabase` pada 14 November 2026 mengonfirmasi Auth aktif dan penolakan akses anonim pada tabel yang diperiksa, tanpa membaca baris. Pengujian akun sekolah nyata belum dilakukan. Workflow GitHub Actions tersedia di `.github/workflows/verify.yml`; workflow hosted belum diverifikasi.
 
 ## Deployment
 
@@ -210,3 +210,7 @@ Daftar dan jumlah migration hosted ada pada bagian [Status saat ini](#status-saa
 Jadwal pelajaran dan usulan perubahan guru tersedia di `/jadwal`. Admin dapat menyetujui/menerapkan atau menolak dengan alasan; lihat pembaruan 13 November 2026 dalam [status proyek](docs/PROJECT_STATUS.md).
 
 Panduan aktivasi administrator dan deployment: [Aktivasi dan rilis](docs/AKTIVASI_DAN_RILIS.md). Workflow pada .github/workflows/verify.yml ditujukan untuk repository aplikasi mandiri.
+
+## Status terbaru backend — 20 November 2026
+
+Stack tetap React 19 + Vite + TypeScript + React Router + Supabase. Status dan batas bukti saat ini tercatat di [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), keputusan terbaru pemilik di [`docs/DECISIONS.md`](docs/DECISIONS.md), dan koordinasi kerja di [`docs/AI_COORDINATION.md`](docs/AI_COORDINATION.md). Jangan menganggap perubahan migration lokal sudah hosted: hosted masih 23 versi, Advisor baseline memiliki satu WARN perlindungan kata sandi bocor, dan tidak ada migration baru yang diterapkan.

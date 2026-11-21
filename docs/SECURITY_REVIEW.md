@@ -1,5 +1,12 @@
 # Telaah Keamanan Migration
 
+## Addendum Codex — 20 November 2026
+
+- Read-only hosted review: 23 migration recorded through `20261113074045`; local count is 38 (15 not hosted), after consolidating the security changes into `20261114083828_security_foundation.sql`. `public.todos` count is 0. No migration write was performed.
+- Security Advisor still reports one WARN: `auth_leaked_password_protection` (Leaked Password Protection Disabled). Hosted migration gate remains blocked until the owner resolves the setting and a fresh Advisor check is clean.
+- Local PGlite coverage now includes the guarded `todos` removal, author-only feedback drafts/events, role/path checks for `supervision-evidence`, document/storage access, notification privacy, habit roles, teacher attendance corrections, and a synthetic Auth retention sequence. PGlite results do not prove hosted Storage behavior.
+- Historical verification before the latest consolidation: `npm run check` passed 137/137 at 39 migrations; the old 308/312 browser result was superseded by the 402/402 run recorded in the latest addendum. PGlite confirms explicit teacher confirmation writes `absent` through the audited attendance helper; absent/ambiguous roster returns `55000` atomically. Auth deletion tests do not cover historical actor-FK references; operator must stop if these prevent deletion.
+
 Status: REVIEW — laporan, tanpa perubahan kode atau migration
 Tanggal: 14 November 2026
 Penulis: Qoder
@@ -89,14 +96,38 @@ Kesimpulan: hosted saat ini berisi 23 migration sesuai README; berkas ke-24 hany
 - `npm run check:supabase` hanya memeriksa daftar tabel tetap; tambahkan tabel baru (termasuk kebiasaan, jika kelak diterapkan) ke skrip tersebut.
 - Loop `do $$ ... execute format` memakai nama objek konstan di dalam migration. Pola ini aman selama tidak pernah menyisipkan input pengguna ke SQL dinamis.
 
-## 6. Rekomendasi untuk Codex (prioritas)
+## 6. Rekomendasi awal (historis; D1/D2 pemilik sudah diputuskan sementara)
 
-1. Konfirmasi dan bereskan `todos` (K1): putuskan dipakai atau dihapus lewat migration baru.
-2. Putuskan kebijakan draf umpan balik (K3) dan catat di `docs/DECISIONS.md`.
-3. Tahan `student_habits` sampai skema disetujui; tambahkan tes database saat modul dibangun (K2).
+1. K1/todos dan K3/draf feedback telah diputuskan pemilik sementara dan migration lokal terkonsolidasi; lihat addendum di bawah.
+2. Kebijakan draf umpan balik author-only telah diputuskan sementara dan dites PGlite.
+3. `student_habits` tetap lokal; tes database mencakup scope akses fungsi. Hosted masih menunggu gate.
 4. Gunakan `begin; ... commit;` pada seluruh migration baru.
 5. Verifikasi RLS Storage hosted dan lakukan UAT bukti privat sebelum rilis (K4).
 
 ## 7. Lampiran — berkas yang ditelaah
 
 `20261110075255_profiles.sql`, `20261110075305_announcements.sql`, `20261110081258_school_master_data.sql`, `20261110081303_restrict_auto_rls_execution.sql`, `20261110082821_people_registry.sql`, `20261110084348_class_enrollments_assignments.sql`, `20261110091137_attendance_core.sql`, `20261110093304_attendance_imports.sql`, `20261111070725_teaching_journals.sql`, `20261111074620_account_relationships.sql`, `20261111075356_guardian_attendance.sql`, `20261111080033_teaching_modules.sql`, `20261111080735_academic_supervision.sql`, `20261111082822_supervision_evidence.sql`, `20261111092126_class_materials.sql`, `20261111092744_class_tasks.sql`, `20261111232717_task_submissions.sql`, `20261111233649_task_feedback.sql`, `20261111234856_academic_assessments.sql`, `20261112051122_assessment_subject_identity.sql`, `20261113000504_lesson_schedules.sql`, `20261113061010_schedule_proposals.sql`, `20261113074045_create_private_todos.sql`, `20261114000139_student_habits.sql` (lokal, belum diterapkan).
+
+# Pembaruan security review — 20 November 2026 (Codex)
+
+- `todos`: hosted read-only count 0. Perubahan lokal kini ada dalam `20261114083828_security_foundation.sql`, dengan lock, guard count, revoke, dan drop transaksional. Tes PGlite menolak tabel berisi data dan menghapus tabel kosong. Belum diterapkan hosted.
+- Feedback: `20261114083828_security_foundation.sql` membatasi draf/event draf hanya ke penulis; pembaca lain hanya dapat membaca publikasi. PGlite lintas peran lulus.
+- Storage supervision-evidence: tes PGlite mencakup kepala sekolah, guru pemilik pra/pasca publikasi, guru lain, siswa, wali, pending, dan folder rusak; belum membuktikan policy hosted.
+- Dokumen: migration lanjutan menambahkan versi/review/event dan membuat admin tak dapat menyetujui/mengarsipkan. PGlite menguji teacher submit, principal approve, dan admin ditolak saat mencoba archive. Upload memakai bucket privat 10 MiB + MIME allowlist; belum diuji hosted.
+- Notifikasi: fanout generik dengan event-key dedupe; uji publikasi memastikan isi sumber tidak bocor ke teks notifikasi. RLS penerima tetap `auth.uid()`.
+- Habit summary: function internal definer memeriksa `auth.uid()` dan helper `can_read_habits`; wrapper publik invoker; validasi minggu Senin, pagination 26/25, notes tidak dikembalikan. PGlite parent/teacher lulus.
+- Advisor hosted dibaca ulang 20 November 2026: 1 WARN `auth_leaked_password_protection` / Leaked Password Protection Disabled. Ini baseline sebelum perubahan migration. Karena pemilik mensyaratkan Advisor bersih pascamigrasi, tahan hosted sampai pemilik menangani setting Auth dan pemeriksaan berikutnya bersih.
+- Hasil tes dan check yang berlaku dicatat pada bagian "Verifikasi lokal dan hosted terbaru" di akhir dokumen ini.
+
+## Verifikasi Codex pasca-konsolidasi — 20 November 2026
+
+- `npm run check` Node v24.22.3 EXIT 0: 38 migration, 140/140 tes, lint, typecheck, build 1.787 modul dan audit 29 berkas JS tanpa akun demo. Build memakai konfigurasi sintetis proses-lokal; chunk PDF memberi peringatan ukuran 790,69 kB.
+- Tes PGlite penuh memverifikasi migration `20261114083828_security_foundation.sql`, termasuk guard data `todos`, FK profil dengan `ON DELETE SET NULL`, draft author-only, serta izin `habit_students()`.
+- Catatan historis: browser 308/312 pada run sebelum perbaikan trace; suite terbaru 402/402 (port 5472) ada di addendum akhir.
+## Verifikasi lokal dan hosted terbaru — 20 November 2026
+
+- `npm run check` Node v24.22.3 EXIT 0: 140/140 tes unit/database, migration dan CI checks, lint, typecheck, build 1.787 modul, 29 berkas JS tanpa akun demo; log `docs/logs/check-2026-11-20-post-trace-node24.log`. Build menggunakan konfigurasi publishable sintetis proses-lokal; peringatan chunk PDF 790,69 kB.
+- Suite browser penuh EXIT 0: 402/402, port 5472, 10,4 menit, Playwright trace off; log `docs/logs/browser-full-2026-11-20-port5472-traceoff.log`. API tiruan; ini bukan UAT akun nyata.
+- Supabase read-only 16:32 WIB: 23 migration sampai `20261113074045`, Security Advisor tetap WARN `auth_leaked_password_protection`. Tidak ada migration hosted diterapkan.
+- `todos` kosong pernah terverifikasi read-only pada pemeriksaan sebelumnya; migration lokal menjaga lock dan membatalkan transaksi bila tabel tidak kosong. Tes PGlite Storage dan RLS adalah simulasi lokal, bukan bukti konfigurasi hosted.
+- Gerbang hosted tetap tertahan: Advisor harus bersih, `npm run check:supabase`, verifikasi Supabase lokal, dan backup/restore belum tersedia. Jangan menerapkan migration sampai seluruh prasyarat terdokumentasi terpenuhi.

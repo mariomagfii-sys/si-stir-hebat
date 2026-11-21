@@ -1,23 +1,22 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { Navigate } from 'react-router-dom'
-import { getDemoSession } from '../lib/demo-auth'
 import { supabase } from '../lib/supabase'
-
-const AuthContext = createContext<{ session: Session | null; loading: boolean; error: string }>({ session: null, loading: true, error: '' })
+import { AuthContext, useAuth } from '../components/auth/auth-context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   useEffect(() => {
-    if (!supabase) {
-      setSession(getDemoSession())
+    const client = supabase
+    if (!client) {
+      setSession(null)
+      setError('Konfigurasi Supabase belum tersedia. Sesi tidak dapat dimuat.')
       setLoading(false)
       return
     }
 
-    const client = supabase
     let active = true
     let changed = false
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, next) => {
@@ -36,8 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
   return <AuthContext.Provider value={{ session, loading, error }}>{children}</AuthContext.Provider>
 }
-
-export const useAuth = () => useContext(AuthContext)
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, error } = useAuth()

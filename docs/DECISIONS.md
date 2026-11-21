@@ -1,8 +1,75 @@
 # Keputusan implementasi dan keputusan pemilik
 
+## Keputusan pemilik terbaru — 20 November 2026 (menggantikan keputusan yang bertentangan)
+
+Keputusan berikut disampaikan kembali langsung oleh pemilik untuk tugas backend SI STIR HEBAT. Jika isi lama di bawah berbeda, bagian ini yang berlaku. Catatan lama dipertahankan sebagai riwayat.
+
+- **D1 — `todos`:** tidak dipakai UI. Migration baru mencabut hak lalu menghapus tabel setelah count=0 diverifikasi; migration memeriksa guard itu sendiri.
+- **D2 — Draf umpan balik:** hanya penulis dapat membaca draf dan event draf; admin/kepala sekolah hanya membaca umpan balik terbit.
+- **D3 — Mode demo:** hanya aktif saat `import.meta.env.DEV`; build produksi harus gagal tanpa konfigurasi valid, dan akun demo tidak boleh masuk bundel produksi.
+- **D4 — PRD bagian 10 superseded:** Next.js/Tailwind/Zod/monorepo pada PRD digantikan stack aktual React 19 + Vite + TypeScript + React Router + Supabase sesuai SAD. Jangan memulai migrasi stack.
+- **D5 — Retensi sementara, dapat direvisi pemilik:** registri, absensi, nilai, dan jurnal disimpan selama siswa terdaftar ditambah 5 tahun ajaran; audit 5 tahun; komunikasi 1 tahun ajaran; bukti supervisi **1 tahun ajaran** (revisi pemilik 21 November 2026; sebelumnya 2 tahun). Saat siswa keluar, nonaktifkan, lepaskan tautan akun, dan pertahankan snapshot. Tidak ada penghapusan otomatis; operator mengikuti prosedur yang didokumentasikan.
+- **D6 — 7 Kebiasaan:** checklist harian diisi wali (siswa kelas rendah melalui wali); guru memantau rekap kelas tugasnya. Sel kosong berarti “belum diisi”, false berarti “tidak dilakukan”. Tanpa peringkat, hukuman, atau perbandingan antarsiswa; apresiasi positif saja; wali hanya melihat anak tertaut.
+- **D7 — Ketidakhadiran wali:** wali mengirim laporan, guru kelas memverifikasi atau menolak, baru kemudian status absensi diisi. Laporan tidak otomatis menjadi status final. Notifikasi hanya di aplikasi.
+- **D8 — Palet:** migrasikan token warna global bertahap ke ungu tua/lilac/biru muda/pink sesuai UI/UX Blueprint, tanpa merombak logika halaman.
+
+Keputusan ini berstatus sementara dan dapat direvisi pemilik. Izin pemilik mencakup migration baru dan verifikasi hosted sesuai gerbang hard rules. Tidak ada izin menghapus data yang masih ada, mengubah akun/peran, mereset database, atau memakai ulang migration hosted. Migration `todos` memeriksa count=0 saat berjalan dan hosted read-only telah menghasilkan count=0 pada 20 November 2026. Draf migration tetap harus diuji lokal sebelum hosted.
+
+- **Konflik stack (20 November 2026):** brief fondasi dua agen menyatakan stack terkunci React 19 + Vite + TypeScript + Supabase dan **Next.js dilarang**. D4 di atas sudah menyatakan bagian 10 PRD (Next.js/Tailwind/Zod/monorepo) superseded; D1 lama (migrasi bertahap ke Next.js) ditangguhkan sampai pemilik menegaskan ulang. Tailwind, Zod, dan monorepo tidak dipakai; tidak ada izin menambah dependency untuk ketiganya.
+
 Dokumen ini mencatat keputusan pemilik dan asumsi teknis konservatif. Tujuh dokumen acuan telah disalin ke `docs/references/` pada 15 November 2026; lihat indeks dan hierarki otoritasnya di `docs/references/README.md`. Keputusan pemilik di bawah mengikat dan menggantikan bagian acuan yang bertentangan.
 
-## Keputusan pemilik — 15 November 2026
+## Keputusan pemilik — 20 November 2026 (status: sementara)
+
+Nomor D1 sampai D8 di bawah adalah penomoran terbaru dari pemilik. "Sementara" berarti boleh direvisi pemilik, tetapi mengikat sampai ada keputusan pengganti. Bila bertentangan, bagian ini menggantikan keputusan 15 November 2026. Izin penerapan migration hosted tanggal 15 November 2026 beserta syaratnya tetap berlaku.
+
+### D1 — Hapus tabel public.todos
+
+Tabel `public.todos` tidak dipakai UI dan akan dihapus lewat migration baru: `revoke all` lalu `drop table`. Syarat: verifikasi jumlah baris 0 dicatat lebih dulu. Pemilik migration: Codex. Belum ada drop yang dijalankan.
+
+### D2 — Draf umpan balik tugas hanya untuk penulis
+
+Draf umpan balik tugas dan event draf hanya dapat dibaca penulisnya. Administrator dan kepala sekolah membaca hanya umpan balik yang sudah terbit. Perubahan lewat migration policy baru beserta tes penolakan lintas peran. Pemilik migration: Codex.
+
+### D3 — Mode demo hanya saat pengembangan
+
+Mode demo hanya aktif saat `import.meta.env.DEV`. Build produksi tanpa konfigurasi Supabase yang valid harus gagal, dan akun demo tidak boleh masuk bundel produksi. Ini menegaskan D5 tanggal 15 November 2026.
+
+### D4 — PRD bagian 10 superseded
+
+Bagian 10 PRD (Next.js, Tailwind, Zod, monorepo) dinyatakan superseded oleh SAD dan stack berjalan: React 19 + Vite + TypeScript + React Router + Supabase. Keputusan D1 tanggal 15 November 2026 tentang migrasi bertahap ke Next.js tidak lagi menjadi arahan aktif. Tujuh dokumen acuan berada di `docs/references/` dengan versi ditandai di `docs/references/README.md`.
+
+### D5 — Retensi data sementara
+
+Registri, absensi, nilai, dan jurnal disimpan selama siswa terdaftar ditambah 5 tahun ajaran. Audit disimpan 5 tahun. Pesan komunikasi 1 tahun ajaran. Bukti supervisi **1 tahun ajaran** (revisi pemilik 21 November 2026; sebelumnya 2 tahun). Siswa keluar: nonaktifkan, lepas tautan akun, snapshot tetap disimpan. Tidak ada penghapusan otomatis; prosedur operator didokumentasikan, bukan dijalankan otomatis. Dapat direvisi pemilik.
+
+### D6 — 7 Kebiasaan
+
+Checklist harian diisi wali, termasuk siswa kelas rendah melalui wali. Guru memantau rekap kelasnya. Sel kosong berarti "belum diisi" dan berbeda dari "tidak dilakukan". Tanpa peringkat antarsiswa, tanpa hukuman atau perbandingan, apresiasi positif saja. Wali hanya melihat anak yang tertaut.
+
+### D7 — Laporan ketidakhadiran wali
+
+Wali mengirim laporan, guru kelas memverifikasi atau menolak, baru setelah itu status absensi diisi. Laporan tidak boleh otomatis menjadi absensi final. Notifikasi hanya di dalam aplikasi.
+
+### D8 — Migrasi palet bertahap
+
+Token warna global dimigrasikan bertahap ke ungu tua, lilac, biru muda, dan pink sesuai UI/UX Blueprint, tanpa merombak logika halaman.
+
+### Keputusan fitur fondasi — 21 November 2026
+
+- **Absensi guru:** guru aktif melakukan check-in/out; request ID membuat retry idempoten. Koreksi diajukan guru dan hanya kepala sekolah yang menyetujui/menolak. Administrator, siswa, wali, akun pending, dan anonim tidak mencatat atau meninjau koreksi.
+- **Dokumen sekolah:** kepala sekolah meninjau dan menyetujui dokumen; administrator teknis dapat mengelola metadata/kategori tanpa hak persetujuan; guru mengelola dokumen miliknya pada status yang diizinkan; siswa dan wali tidak memiliki akses.
+- **Notifikasi:** hanya dalam aplikasi. Judul/isi umum dan tautan berotorisasi; tidak menyalin nama lengkap, nilai, alasan, atau isi komunikasi.
+- **Waktu:** tanggal operasional mengikuti zona `Asia/Jakarta`.
+
+### Status penerapan keputusan 20 November 2026
+
+- D1 dan D2: perubahan digabung dengan FK profil dan review habit ke `20261114083828_security_foundation.sql`; PGlite penuh setelah konsolidasi lulus dalam `npm run check` (140/140 tes), dan hosted belum berubah karena preflight X3 belum bersih.
+- D3 dan D4: gerbang demo sudah diterapkan lokal; PRD bagian 10 ditandai superseded dalam dokumen acuan.
+- D5: prosedur retensi operator didokumentasikan; uji Auth sintetis belum mencakup seluruh FK audit historis atau Supabase lokal.
+- D6 sampai D8: acuan kerja UI; penerapannya bertahap dan dicatat di `docs/IMPLEMENTATION_LOG.md`.
+
+## Keputusan pemilik — 15 November 2026 (sebagian digantikan 20 November 2026)
 
 ### D1 — Migrasi bertahap ke Next.js
 

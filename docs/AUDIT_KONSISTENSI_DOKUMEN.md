@@ -49,7 +49,7 @@ Angka 109 adalah hasil `npm run check` yang diverifikasi auditor pada 14 Novembe
 ### C-03 — Struktur PROJECT_STATUS (Sedang)
 
 - `docs/PROJECT_STATUS.md:33` menyatakan "Pembaruan terakhir: 12 November 2026", padahal berkas memuat bagian 14 November (misalnya `:269`).
-- `:269` berjudul "Ringkasan sekolah dashboard � 14 November 2026" — karakter rusak (mojibake).
+- `:269` berjudul "Ringkasan sekolah dashboard … 14 November 2026" — saat audit masih memuat karakter rusak (mojibake).
 - Bagian 14 November ditambahkan setelah bagian lama, sementara bagian atas menyiratkan urutan terbaru lebih dulu; pembaca sulit menentukan status berlaku.
 - `:51` menyatakan "Tujuh lampiran diterima dan ditelaah pada 11 November 2026"; pada 14 November 2026 tujuh berkas acuan diberikan ke auditor di luar repo, tetapi `docs/references` masih tidak ada dan README menyatakan folder itu tidak tersedia. Tanggal, jumlah, dan status penelaahan belum dapat diverifikasi dari repo.
 

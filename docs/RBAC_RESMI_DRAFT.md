@@ -1,9 +1,9 @@
 # Draf Matriks RBAC Resmi
 
 Status: **DRAF untuk disahkan pemilik** — bukan kebijakan resmi
-Tanggal: 15 November 2026
+Tanggal: 15 November 2026; diperbarui 20 November 2026 (modul kebiasaan validasi, laporan ketidakhadiran wali, notifikasi, dokumen sekolah)
 Penulis: Qoder
-Sumber utama: `docs/AUDIT_RINGKASAN_PROYEK.md` bagian 7, dikoreksi dengan pembacaan policy RLS pada migration lokal
+Sumber utama: `docs/AUDIT_RINGKASAN_PROYEK.md` bagian 7, dikoreksi dengan pembacaan policy RLS pada migration lokal (termasuk `20261118000100`–`20261118000400`).
 Sifat: baca-saja. Tidak ada perubahan policy, schema, kode, atau data hosted. Tidak ada baris data pengguna yang dibaca.
 
 ## 1. Cara membaca
@@ -34,12 +34,19 @@ Keterangan:
 | Jadwal | K via RPC, B | B | T; usulan sendiri | T | T | - |
 | Bukti supervisi (Storage) | B\* | B\* | B\* | B\* **PD-03** | B\* **PD-03** | B\* **PD-03** |
 | Komunikasi guru–wali | - **PD-04** | - **PD-04** | K, T pasangan aktif | - | K, T pasangan aktif | - |
-| Kebiasaan 7 hari (lokal) | B | B | T penugasan | - | T anak sendiri | - |
+| Kebiasaan 7 hari | B | B | B penugasan, validasi via trigger | K+ isi, T diri sendiri | K+ isi, T anak sendiri | - |
+| Laporan ketidakhadiran wali | B | B | B penugasan, keputusan via RPC | - | K+ ajukan, T anak sendiri | - |
+| Notifikasi pribadi | T diri sendiri | T diri sendiri | T diri sendiri | T diri sendiri | T diri sendiri | T diri sendiri |
+| Dokumen sekolah (metadata) | K, B | K tinjau/arsip, B | K draf sendiri sampai submit, B milik sendiri | - **PD-10** | - **PD-10** | - |
+| Dokumen sekolah (Storage `school-documents`) | K via policy, B | K via policy, B | K berkas sendiri, B milik sendiri | - **PD-10** | - **PD-10** | - |
 
 Catatan:
 
-- Baris **Kebiasaan 7 hari** berasal dari migration lokal `20261114000139_student_habits.sql` yang belum tercatat hosted. Baris ini belum boleh dianggap fitur produksi.
-- Baris **Komunikasi** belum memiliki UI dan migration-nya belum hosted.
+- Baris **Komunikasi** memiliki UI (`src/features/komunikasi`), tetapi migration `20261114083827_komunikasi` belum hosted.
+- Baris **Kebiasaan 7 hari** kini memakai validation kolom dan policy dari `20261118000100_student_habits_validation.sql`: guru penugasan dapat memvalidasi lewat trigger, siswa/wali mengisi catatan sendiri. Migration ini belum hosted. Model `habits` masih boolean per hari, sehingga "belum diisi" dan "tidak dilakukan" belum dapat dibedakan (PD-12).
+- Baris **Laporan ketidakhadiran wali** berasal dari `20261118000200_guardian_absence_reports.sql`: wali mengajukan untuk anak aktif, guru kelas memutuskan lewat `review_guardian_absence_report`, admin/kepala sekolah membaca. Tidak ada hak hapus. Migration belum hosted.
+- Baris **Notifikasi pribadi** berasal dari `20261118000300_notifications.sql`: SELECT hanya baris dengan `recipient_profile_id = auth.uid()`, penulisan hanya lewat `school_private.create_notification`. Tidak ada jalur baca lintas pengguna, termasuk admin (PD-09). Migration belum hosted.
+- Baris **Dokumen sekolah** berasal dari `20261118000400_school_documents.sql`: guru membuat draf hingga submit, kepala sekolah menyetujui/mengembalikan, admin mengelola; policy Storage `school-documents` memakai helper yang sama. Siswa dan wali belum diberi akses (PD-10). Migration belum hosted.
 - **Registri**: policy `people_read` hanya mengizinkan administrator, kepala sekolah, dan pemilik baris guru/siswa (`supabase/migrations/20261110082821_people_registry.sql:36`). Audit sebelumnya menyebut guru dapat membaca siswa yang diajar; itu tidak sesuai dengan policy SELECT registri. Kebutuhan operasional guru harus dipenuhi lewat RPC/query terbatas atau policy baru yang disetujui.
 - **Relasi akun**: hanya administrator yang memiliki policy SELECT (`supabase/migrations/20261111074620_account_relationships.sql:32`). Kepala sekolah tidak dapat membaca relasi. Perlu keputusan apakah itu disengaja.
 - **Bukti supervisi**: policy Storage `supervision_evidence_read` hanya memeriksa bucket dan `stage = 4`, tanpa memeriksa peran (`supabase/migrations/20261111082822_supervision_evidence.sql:29-39`). Akibatnya semua akun authenticated, termasuk pending, dapat membaca berkas pada tahap tersebut. Ini temuan S-02, bukan perilaku yang disahkan.
@@ -66,7 +73,42 @@ Catatan:
 - **Supervisi tabel** terpisah dari **Bukti supervisi (Storage)**. Tabel dapat dibatasi, tetapi berkasnya memiliki kebocoran baca pada PD-03.
 - **Absensi wali** berasal dari RPC portal terbatas 30 status terakhir, bukan SELECT langsung ke seluruh tabel absensi.
 
-## 4. Sel yang perlu keputusan pemilik
+## 4. Matriks ringkas V/C/U/D/A/E
+
+Matriks ini merangkum bagian 2 dan 3 dengan kode tindakan: **V** lihat, **C** buat, **U** ubah atau isi, **D** hapus, **A** setujui atau validasi, **E** ekspor. Tanda `-` berarti tidak ada akses eksplisit; `PD-xx` berarti sel menunggu keputusan pemilik. Tidak ada baris yang memberi hak `D`: penghapusan data belum diatur dan D5 hanya menetapkan retensi, bukan hak hapus pengguna.
+
+| Modul | Admin | Kepala | Guru | Siswa | Wali | Pending |
+| --- | --- | --- | --- | --- | --- | --- |
+| Profil/akun sendiri | V, U | V, U | V, U | V, U | V, U | V, U |
+| Pengumuman | V, C, U | V, C, U | V terbit | V terbit | V terbit | - |
+| Data master | V, C, U | V | V | V | V | - |
+| Registri guru/siswa | V, C, U | V | V diri sendiri **PD-01** | V diri sendiri | - | - |
+| Relasi akun | V, C via RPC | - **PD-02** | - | - | - | - |
+| Jadwal | V, C, U via RPC | V | V, C usulan sendiri | V | V | - |
+| Komunikasi guru–wali | - **PD-04** | - **PD-04** | V, C pasangan aktif | - | V, C pasangan aktif | - |
+| Kebiasaan harian | V | V | V penugasan, A | V, C, U diri sendiri | V, C, U anak tertaut | - |
+| Laporan ketidakhadiran wali | V | V | V penugasan, A via RPC | - | V, C anak tertaut | - |
+| Notifikasi pribadi | V, U milik sendiri | V, U milik sendiri | V, U milik sendiri | V, U milik sendiri | V, U milik sendiri | V, U milik sendiri |
+| Dokumen sekolah (metadata dan Storage) | V, C, U, A | V, A | V, C, U draf sendiri | - **PD-10** | - **PD-10** | - |
+| Absensi | V | V | V, C, U penugasan | V diri sendiri | V anak, 30 status terakhir | - |
+| Jurnal mengajar | V | V | V, C milik sendiri | - | - | - |
+| Modul ajar | V non-draf | V, A | V, C, U milik sendiri | - | - | - |
+| Materi dan tugas | V non-draf | V non-draf | V, C, U penugasan | V terbit | V terbit anak | - |
+| Pengumpulan tugas | - | - | V tugas miliknya | V, C milik sendiri | - | - |
+| Umpan balik | V terbit **D2** | V terbit **D2** | V, C, U milik sendiri | V terbit | V terbit anak | - |
+| Asesmen dan hasil | V **PD-06** | V **PD-06** | V, C, U milik sendiri | V terbit | V terbit anak | - |
+| Supervisi (tabel) | - | V, C, U, A | V hasil sendiri setelah terbit | - | - | - |
+| Bukti supervisi (Storage) | V **PD-03** | V, C, U, A **PD-03** | V **PD-03** | **PD-03** | **PD-03** | **PD-03** |
+
+Catatan penerapan:
+
+- **D2 (20 November 2026)** mengubah umpan balik untuk admin/kepala sekolah menjadi hanya yang sudah terbit. Migration lokal `20261114083828_security_foundation.sql` sudah ada, tetapi belum hosted; sel di atas menunjukkan target keputusan, bukan bukti policy hosted.
+- **D5** menetapkan retensi, bukan hak hapus. Kolom `D` sengaja kosong untuk semua peran sampai ada keputusan dan tes tersendiri.
+- **D6** menetapkan kebiasaan diisi wali dan direkap guru tanpa peringkat. Pembedaan "belum diisi" dan "tidak dilakukan" masih **PD-12**.
+- **D7** menetapkan laporan wali tidak otomatis menjadi absensi final. Aksi **A** pada guru berarti memverifikasi atau meminta perbaikan lewat RPC.
+- **E (ekspor)** belum ada untuk modul mana pun di matriks ini; kebutuhan ekspor harus menjadi keputusan tersendiri.
+
+## 5. Sel yang perlu keputusan pemilik
 
 | ID | Sel/Modul | Keadaan saat ini | Keputusan yang diminta |
 | --- | --- | --- | --- |
@@ -78,8 +120,12 @@ Catatan:
 | PD-06 | Asesmen — Admin/Kepala | Dapat membaca draf | Apakah draf asesmen boleh dibaca staf sebelum publikasi? Jika tidak, samakan perbaikannya dengan PD-05. |
 | PD-07 | Navigasi vs RLS | Admin melihat beberapa menu pembelajaran, tetapi tidak otomatis berhak menulis | Tentukan apakah menu disembunyikan atau RLS diberi hak tulis. Jangan mengandalkan UI sebagai otorisasi. |
 | PD-08 | Data master — Siswa/Wali | Dapat membaca data master | Konfirmasi apakah seluruh data master (tahun ajaran, kelas, mapel) memang layak dibaca siswa/wali, atau perlu dibatasi. |
+| PD-09 | Notifikasi — Admin/Kepala | Tidak ada jalur baca notifikasi pengguna lain | Apakah pengawasan atau pengiriman ulang oleh admin diperlukan? Jika ya, tentukan RPC baca-saja, alasan akses, dan retensinya; jangan memberi SELECT langsung. |
+| PD-10 | Dokumen sekolah — Siswa/Wali | Tidak ada akses metadata maupun berkas | Tetapkan apakah siswa/wali boleh membaca dokumen tertentu (misalnya RKT ringkas). Jika ya, tambahkan policy dan uji; bawaan saat ini tertutup. |
+| PD-11 | Validasi kebiasaan — revert status | `validated_by`/`validated_at` tetap terisi bila status kembali `pending` | Putuskan apakah kolom validasi dikosongkan saat status bukan `validated`, lalu sesuaikan trigger. |
+| PD-12 | Model kebiasaan — "belum diisi" vs "tidak dilakukan" | `habits` berupa boolean per hari; keduanya tidak dapat dibedakan | Putuskan apakah perlu status tiga nilai atau kolom terpisah sebelum form siswa/wali disempurnakan. |
 
-## 5. Koreksi terhadap `AUDIT_RINGKASAN_PROYEK.md` bagian 7
+## 6. Koreksi terhadap `AUDIT_RINGKASAN_PROYEK.md` bagian 7
 
 | No | Catatan audit lama | Keadaan policy yang terbaca | Dampak |
 | --- | --- | --- | --- |
@@ -90,17 +136,17 @@ Catatan:
 | 5 | Jurnal/Pengumpulan: K | K+ (append-only) | Tidak ada hak koreksi/hapus; jangan menjanjikan edit. |
 | 6 | Jadwal: Guru = T | T + usulan sendiri melalui RPC | Guru dapat mengusulkan, bukan mengubah jadwal utama. |
 
-## 6. Di luar cakupan
+## 7. Di luar cakupan
 
 - Tidak ada pengujian dengan akun sekolah nyata; matriks belum membuktikan perilaku end-to-end.
 - Tidak ada pemeriksaan Storage hosted, Auth redirect, email, atau sesi nyata.
 - Tidak ada penilaian UI/aksesibilitas; PD-07 hanya mencatat ketidaksesuaian navigasi dan RLS.
-- `20261114000139_student_habits` dan `20261114083827_komunikasi` belum hosted; baris terkait adalah rancangan lokal.
+- `20261114000139_student_habits`, `20261114083827_komunikasi`, `20261118000100_student_habits_validation`, `20261118000200_guardian_absence_reports`, `20261118000300_notifications`, dan `20261118000400_school_documents` belum hosted; baris terkait adalah rancangan lokal.
 - Matriks ini tidak menetapkan retensi, penghapusan, atau dasar hukum pemrosesan data anak (D4 masih **BELUM DIPUTUSKAN**).
 
-## 7. Pengesahan pemilik
+## 8. Pengesahan pemilik
 
-Setelah PD-01 sampai PD-08 diputuskan, isi kolom berikut. Sampai itu, matriks tetap draf dan tidak boleh disebut “RBAC resmi”.
+Setelah PD-01 sampai PD-12 diputuskan, isi kolom berikut. Sampai itu, matriks tetap draf dan tidak boleh disebut “RBAC resmi”.
 
 | Peran | Nama | Tanggal | Keputusan/inti persetujuan |
 | --- | --- | --- | --- |

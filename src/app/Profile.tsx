@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { getDemoProfile, updateDemoProfile } from '../lib/demo-auth'
 import { supabase } from '../lib/supabase'
 import { schoolRoleLabels } from '../lib/school'
+import { isPending } from '../utils/permissions'
 
 type ProfileData = { id: string; full_name: string; role: string }
 
@@ -20,17 +20,11 @@ export function Profile({ userId }: { userId: string }) {
     setError('')
 
     const client = supabase
-    if (!client) {
-      const demoProfile = getDemoProfile(userId)
-      if (active) {
-        setProfile(demoProfile ? { id: demoProfile.id, full_name: demoProfile.full_name, role: demoProfile.role } : null)
-        setName(demoProfile?.full_name ?? '')
-        setLoading(false)
-      }
-      return () => { active = false }
-    }
-
     const load = async () => {
+      if (!client) {
+        if (active) setLoading(false)
+        return
+      }
       try {
         const { data, error: failure } = await client.from('profiles').select('id, full_name, role').eq('id', userId).maybeSingle()
         if (failure) throw failure
@@ -56,20 +50,14 @@ export function Profile({ userId }: { userId: string }) {
     setError('')
     setMessage('')
 
-    if (!supabase) {
-      updateDemoProfile(userId, fullName)
-      const nextProfile = getDemoProfile(userId)
-      if (nextProfile) {
-        setProfile({ id: nextProfile.id, full_name: nextProfile.full_name, role: nextProfile.role })
-        setName(nextProfile.full_name)
-        setMessage('Nama berhasil disimpan.')
-      }
+    const client = supabase
+    if (!client) {
+      setError('Konfigurasi Supabase belum tersedia. Periksa pengaturan sekolah.')
       setSaving(false)
       return
     }
-
     try {
-      const { data, error: failure } = await supabase.from('profiles').update({ full_name: fullName }).eq('id', userId).select('id, full_name, role').single()
+      const { data, error: failure } = await client.from('profiles').update({ full_name: fullName }).eq('id', userId).select('id, full_name, role').single()
       if (failure) throw failure
       setProfile(data)
       setName(data.full_name)
@@ -82,7 +70,7 @@ export function Profile({ userId }: { userId: string }) {
   return <div>
     {error && <p className="error" role="alert">{error}</p>}
     {!profile ? <button className="button" onClick={() => setAttempt(value => value + 1)}>Coba muat profil</button> : <>
-      <div className="status">Peran: <strong>{schoolRoleLabels[profile.role] ?? 'Belum tersedia'}</strong>{profile.role === 'pending' && <p>Administrator perlu menetapkan peran Anda sebelum layanan sekolah dapat digunakan.</p>}</div>
+      <div className="status">Peran: <strong>{schoolRoleLabels[profile.role] ?? 'Belum tersedia'}</strong>{isPending(profile.role) && <p>Administrator perlu menetapkan peran Anda sebelum layanan sekolah dapat digunakan.</p>}</div>
       <form onSubmit={save}>
         <label htmlFor="full-name">Nama lengkap</label>
         <input id="full-name" autoComplete="name" required maxLength={120} value={name} disabled={saving} onChange={event => { setName(event.target.value); setMessage('') }} />

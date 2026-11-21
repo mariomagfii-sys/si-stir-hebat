@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useAuth } from '../../lib/auth-context'
+import { useAuth } from '../../components/auth/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
 import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
-import { canReadJournals } from '../../lib/school'
+import { canReadTeachingModules, isPrincipal, isTeacher } from '../../utils/permissions'
 import { supabase } from '../../lib/supabase'
 
 const labels = { draft: 'Draf', submitted: 'Diajukan', returned: 'Perlu revisi', approved: 'Disetujui', archived: 'Diarsipkan' }
@@ -54,11 +54,11 @@ function ModuleWorkspace({ userId }: { userId: string }) {
         if (controller.signal.aborted) return
         const nextRole = profile.data?.role ?? null
         setRole(nextRole)
-        if (!canReadJournals(nextRole)) return
+        if (!canReadTeachingModules(nextRole)) return
         const [records, options] = await Promise.all([
           client.from('teaching_modules').select(moduleColumns).order('updated_at', { ascending: false }).order('id')
             .range(page * pageSize, page * pageSize + pageSize).abortSignal(controller.signal).overrideTypes<Module[], { merge: false }>(),
-          nextRole === 'teacher' ? client.from('teacher_assignments').select('id,school_classes!inner(name),subjects!inner(name)')
+          isTeacher(nextRole) ? client.from('teacher_assignments').select('id,school_classes!inner(name),subjects!inner(name)')
             .eq('is_active', true).eq('school_classes.is_active', true).eq('subjects.is_active', true)
             .limit(1001).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
         ])
@@ -136,14 +136,14 @@ function ModuleWorkspace({ userId }: { userId: string }) {
   return <section className="workspace">
     <h1>Modul Ajar</h1>
     {loading ? <LoadingState /> : loadError ? <ErrorNotice onRetry={reload}>Modul gagal dimuat.</ErrorNotice>
-      : !canReadJournals(role) ? <EmptyState>Halaman ini tersedia untuk guru dan staf sekolah yang berwenang.</EmptyState>
+      : !canReadTeachingModules(role) ? <EmptyState>Halaman ini tersedia untuk guru dan staf sekolah yang berwenang.</EmptyState>
       : <>
         {message && <p role="status">{message}</p>}
         {error && <ErrorNotice onRetry={() => { setError(''); setEditor(null); setSelected(null); reload() }}>{error}</ErrorNotice>}
-        {role === 'teacher' && <ReferenceNotice truncated={optionsTruncated}/>}
-        {role === 'teacher' && !editor && <button className="button" type="button" disabled={!assignments.length || busy}
+        {isTeacher(role) && <ReferenceNotice truncated={optionsTruncated}/>}
+        {isTeacher(role) && !editor && <button className="button" type="button" disabled={!assignments.length || busy}
           onClick={() => { setSelected(null); setEditor({ id: crypto.randomUUID(), assignmentId: '', title: '', objectives: '', activities: '' }) }}>Buat modul</button>}
-        {role === 'teacher' && !assignments.length && <p>Belum ada penugasan aktif untuk membuat modul.</p>}
+        {isTeacher(role) && !assignments.length && <p>Belum ada penugasan aktif untuk membuat modul.</p>}
         {editor && <form className="announcement-editor" onSubmit={saveDraft}>
           <h2>{editor.revision === undefined ? 'Modul baru' : 'Edit modul'}</h2>
           <fieldset disabled={busy}>
@@ -182,20 +182,20 @@ function ModuleWorkspace({ userId }: { userId: string }) {
           <h3>Tujuan pembelajaran</h3><p className="announcement-body">{current.objectives}</p>
           <h3>Kegiatan pembelajaran</h3><p className="announcement-body">{current.activities}</p>
           {current.review_note && <><h3>Catatan pemeriksaan</h3><p className="announcement-body">{current.review_note}</p></>}
-          {role === 'teacher' && (current.status === 'draft' || current.status === 'returned') && <>
+          {isTeacher(role) && (current.status === 'draft' || current.status === 'returned') && <>
             <button className="button secondary" disabled={busy} onClick={() => setEditor({
               id: current.id, revision: current.revision, assignmentId: '',
               title: current.title, objectives: current.objectives, activities: current.activities,
             })}>Edit modul</button>
             <button className="button" disabled={busy} onClick={() => void transition('submitted')}>Ajukan untuk diperiksa</button>
           </>}
-          {role === 'principal' && current.status === 'submitted' && <>
+          {isPrincipal(role) && current.status === 'submitted' && <>
             <label htmlFor="module-note">Catatan pemeriksaan</label>
             <textarea id="module-note" value={note} maxLength={2000} disabled={busy} onChange={event => setNote(event.target.value)} />
             <button className="button secondary" disabled={busy} onClick={() => void transition('returned')}>Kembalikan untuk revisi</button>
             <button className="button" disabled={busy} onClick={() => void transition('approved')}>Setujui modul</button>
           </>}
-          {role === 'principal' && current.status === 'approved' && <button className="button secondary" disabled={busy} onClick={() => void transition('archived')}>Arsipkan modul</button>}
+          {isPrincipal(role) && current.status === 'approved' && <button className="button secondary" disabled={busy} onClick={() => void transition('archived')}>Arsipkan modul</button>}
         </article>}
       </>}
   </section>

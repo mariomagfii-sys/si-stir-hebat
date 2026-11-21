@@ -32,7 +32,43 @@ test('migrations and database permissions', async t => {
   `)
   const migrationDir = new URL('../supabase/migrations/', import.meta.url)
   for (const name of (await readdir(migrationDir)).filter(name => name.endsWith('.sql')).sort()) {
-    await db.exec(await readFile(new URL(name, migrationDir), 'utf8'))
+    const sql = await readFile(new URL(name, migrationDir), 'utf8')
+    if (name === '20261114083828_security_foundation.sql') {
+      await t.test('security foundation guards todos and safely unlinks profile IDs', async () => {
+        await db.query("insert into public.todos (user_id,name) values ($1,'Data Contoh')", ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'])
+        await assert.rejects(db.exec(sql), /Cannot drop public\.todos while it contains rows/)
+        await db.exec('rollback')
+        assert.equal((await db.query('select count(*)::int as total from public.todos')).rows[0].total, 1)
+
+        await db.query('delete from public.todos')
+        await db.exec(sql)
+        assert.equal((await db.query("select to_regclass('public.todos') is null as dropped")).rows[0].dropped, true)
+        const { rows: fks } = await db.query("select c.conrelid::regclass::text as table_name,c.confdeltype from pg_constraint c where c.contype='f' and c.conname in ('teachers_profile_id_fkey','students_profile_id_fkey') order by table_name")
+        assert.deepEqual(fks, [
+          { table_name: 'students', confdeltype: 'n' },
+          { table_name: 'teachers', confdeltype: 'n' },
+        ])
+        const { rows: [rpc] } = await db.query("select p.prosecdef, p.proconfig, has_function_privilege('anon','public.habit_students()','execute') as anon_execute, has_function_privilege('authenticated','public.habit_students()','execute') as authenticated_execute from pg_proc p where p.oid='public.habit_students()'::regprocedure")
+        assert.equal(rpc.prosecdef, true)
+        assert.ok(rpc.proconfig.includes('search_path=""'))
+        assert.equal(rpc.anon_execute, false)
+        assert.equal(rpc.authenticated_execute, true)
+
+        const linkedProfile = 'a1000000-0000-4000-8000-000000000001'
+        const creatorProfile = 'a1000000-0000-4000-8000-000000000002'
+        await db.query('insert into auth.users (id) values ($1),($2)', [linkedProfile, creatorProfile])
+        await db.query("insert into public.teachers (code,name,profile_id,created_by) values ('FK_TEACHER','Data Contoh Guru', $1, $2)", [linkedProfile, creatorProfile])
+        await db.query("insert into public.students (code,name,profile_id,created_by) values ('FK_STUDENT','Data Contoh Siswa', $1, $2)", [linkedProfile, creatorProfile])
+        await db.query('delete from public.profiles where id=$1', [linkedProfile])
+        assert.deepEqual((await db.query("select code,profile_id from public.teachers where code='FK_TEACHER'")).rows, [{ code: 'FK_TEACHER', profile_id: null }])
+        assert.deepEqual((await db.query("select code,profile_id from public.students where code='FK_STUDENT'")).rows, [{ code: 'FK_STUDENT', profile_id: null }])
+        await db.query("delete from public.teachers where code='FK_TEACHER'")
+        await db.query("delete from public.students where code='FK_STUDENT'")
+        await db.query('delete from auth.users where id=$1', [creatorProfile])
+      })
+      continue
+    }
+    await db.exec(sql)
   }
   await t.test('existing and new users receive pending profiles', async () => {
     const { rows } = await db.query("select role from public.profiles where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'")
@@ -64,6 +100,29 @@ test('migrations and database permissions', async t => {
     await db.exec(role === 'anon' ? 'set role anon' : 'set role authenticated')
   }
   const permissionDenied = { code: '42501' }
+  await t.test('dashboard overview aggregates only for administrator and principal', async () => {
+    const { rows: indexes } = await db.query("select indexname from pg_indexes where schemaname='public' and tablename='teaching_modules'")
+    assert.ok(indexes.some(row => row.indexname === 'teaching_modules_submitted_dashboard_idx'))
+    assert.ok(indexes.some(row => row.indexname === 'teaching_modules_returned_dashboard_idx'))
+    await as('administrator')
+    const { rows: [adminResult] } = await db.query('select public.dashboard_overview() as value')
+    assert.equal(adminResult.value.profile.role, 'administrator')
+    assert.deepEqual(adminResult.value.active, { students: 0, teachers: 0, classes: 0 })
+    assert.deepEqual(adminResult.value.supervision_stages, { '1': 0, '2': 0, '3': 0, '4': 0 })
+    assert.deepEqual(adminResult.value.teaching_modules, { submitted: 0, returned: 0 })
+    assert.deepEqual(adminResult.value.announcements.recent, [])
+    await as('principal')
+    const { rows: [principalResult] } = await db.query('select public.dashboard_overview() as value')
+    assert.equal(principalResult.value.profile.role, 'principal')
+    await as('teacher')
+    await assert.rejects(db.query('select public.dashboard_overview()'), permissionDenied)
+    await db.exec('reset role')
+    await db.query("select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000099', false)")
+    await db.exec('set role authenticated')
+    await assert.rejects(db.query('select public.dashboard_overview()'), permissionDenied)
+    await as('anon')
+    await assert.rejects(db.query('select public.dashboard_overview()'), permissionDenied)
+  })
   await t.test('account relationships enforce role and audit only committed changes', async () => {
     await as('administrator')
     const { rows: [student] } = await db.query(
@@ -736,6 +795,8 @@ test('migrations and database permissions', async t => {
     const insert = text => db.query('insert into public.task_feedback(submission_id,feedback) values ($1,$2) returning *', [submission,text])
     await assert.rejects(insert('   '), { code: '23514' })
     let feedback = (await insert('Draf contoh')).rows[0]
+    assert.equal((await db.query('select * from public.task_feedback')).rows.length, 1)
+    assert.equal((await db.query('select * from public.task_feedback_events')).rows.length, 1)
     await assert.rejects(insert('Duplikat'), { code: '23505' })
     await assert.rejects(db.query('update public.task_feedback set student_id=$1', [studentTwo]), permissionDenied)
     for (const role of ['student','parent','otherTeacher','pending']) {
@@ -749,7 +810,8 @@ test('migrations and database permissions', async t => {
     await assert.rejects(db.query('select * from public.task_feedback'), permissionDenied)
     for (const role of ['administrator','principal']) {
       await as(role)
-      assert.equal((await db.query('select * from public.task_feedback')).rows.length, 1)
+      assert.equal((await db.query('select * from public.task_feedback')).rows.length, 0)
+      assert.equal((await db.query('select * from public.task_feedback_events')).rows.length, 0)
       assert.equal((await db.query("update public.task_feedback set status='published' returning id")).rows.length, 0)
     }
     await as('teacher')
@@ -765,16 +827,22 @@ test('migrations and database permissions', async t => {
       ['Draf contoh','draft',0], ['Perbaiki langkah kedua','draft',1], ['Perbaiki langkah kedua','published',2],
     ])
     await assert.rejects(db.query('delete from public.task_feedback_events'), permissionDenied)
+    for (const role of ['administrator','principal']) {
+      await as(role)
+      assert.equal((await db.query('select feedback from public.task_feedback')).rows.length, 1)
+      assert.deepEqual((await db.query('select status from public.task_feedback_events')).rows.map(row => row.status), ['published'])
+    }
     await as('student')
     assert.equal((await db.query('select feedback from public.task_feedback')).rows[0].feedback, 'Perbaiki langkah kedua')
-    assert.equal((await db.query('select * from public.task_feedback_events')).rows.length, 0)
+    assert.deepEqual((await db.query('select status from public.task_feedback_events')).rows.map(row => row.status), ['published'])
     await as('parent')
     assert.equal((await db.query('select * from public.task_feedback')).rows.length, 0)
+    assert.equal((await db.query('select * from public.task_feedback_events')).rows.length, 0)
     await as('administrator')
     await db.query("select public.set_account_relationship('parent',$1,$2,true,'Data contoh')", [studentOne,ids.parent])
     await as('parent')
     assert.equal((await db.query('select feedback from public.task_feedback')).rows[0].feedback, 'Perbaiki langkah kedua')
-    assert.equal((await db.query('select * from public.task_feedback_events')).rows.length, 0)
+    assert.deepEqual((await db.query('select status from public.task_feedback_events')).rows.map(row => row.status), ['published'])
     await as('administrator')
     await db.query("select public.set_account_relationship('parent',$1,$2,false,'Data contoh')", [studentOne,ids.parent])
     await as('parent')
@@ -847,6 +915,157 @@ test('migrations and database permissions', async t => {
     await as('administrator')
     assert.equal((await db.query('select * from public.academic_supervisions')).rows.length, 0)
     assert.equal((await db.query('select * from storage.objects')).rows.length, 0)
+  })
+  await t.test('supervision evidence storage policy separates principal, owner teacher and outsiders', async () => {
+    const otherUserId = '10000000-0000-4000-8000-000000000007'
+    await db.exec('reset role')
+    await db.query('delete from storage.objects')
+    await db.query('insert into auth.users (id) values ($1)', [otherUserId])
+    await db.query("update public.profiles set role = 'teacher' where id = $1", [otherUserId])
+    await db.query(
+      "insert into public.teachers (code,name,profile_id) values ('TEST_3','Data Contoh Guru Lain',$1)",
+      [otherUserId],
+    )
+    await as('administrator')
+
+    const asUser = async (id, role = 'authenticated') => {
+      await db.exec('reset role')
+      await db.query("select set_config('request.jwt.claim.sub', $1, false)", [id])
+      await db.exec(`set role ${role}`)
+    }
+    const insertObject = async (name, id) => {
+      await asUser(id)
+      return db.query("insert into storage.objects (bucket_id,name) values ('supervision-evidence',$1)", [name])
+    }
+    const selectObjects = async (id) => {
+      await asUser(id)
+      return db.query('select name from storage.objects order by name')
+    }
+
+    await as('principal')
+    const { rows: [session] } = await db.query(
+      "insert into public.academic_supervisions (teacher_id,scheduled_on,focus) values ($1,$2,'Data Contoh') returning id",
+      [teacherOne, today],
+    )
+    const update = values => db.query(`update public.academic_supervisions set ${values} where id=$1 returning stage`, [session.id])
+    await update("stage=2, preparation='Persiapan'")
+    await update("stage=3, planning_score=2, instruction_score=3, assessment_score=4, observation_notes='Observasi'")
+    await update("stage=4, reflection='Refleksi', feedback='Umpan balik', follow_up_plan='Perbaikan', target_on=scheduled_on")
+
+    const objectName = `${session.id}/00000000-0000-0000-0000-000000000002-bukti.pdf`
+    const malformed = [
+      'tanpa-folder.pdf',
+      'bukan-uuid/00000000-0000-0000-0000-000000000002-bukti.pdf',
+      `${session.id}/tanpa-uuid-bukti.pdf`,
+      `${session.id}/00000000-0000-0000-0000-000000000002/extra-bukti.pdf`,
+      `${session.id}/00000000-0000-0000-0000-000000000002`,
+    ]
+    for (const name of malformed) {
+      await assert.rejects(insertObject(name, ids.principal), permissionDenied, name)
+    }
+    assert.equal((await insertObject(objectName, ids.principal)).rowCount, 1)
+
+    await asUser(ids.principal)
+    assert.equal((await db.query('delete from storage.objects returning name')).rowCount, 1)
+    assert.equal((await insertObject(objectName, ids.principal)).rowCount, 1)
+
+    for (const [role, id] of [['teacher', ids.teacher], ['teacher', otherUserId], ['student', ids.student], ['parent', ids.parent], ['pending', ids.pending]]) {
+      assert.deepEqual((await selectObjects(id)).rows, [], `${role} tidak boleh membaca bukti sebelum terbit`)
+    }
+    await asUser('', 'anon')
+    assert.deepEqual((await db.query('select name from storage.objects')).rows, [], 'anon tidak boleh membaca bukti')
+
+    await as('principal')
+    await update("follow_up_status='complete', follow_up_evaluation='Evaluasi'")
+    await update('published_at=now()')
+    await assert.rejects(insertObject(`${session.id}/00000000-0000-0000-0000-000000000003-baru.pdf`, ids.principal), permissionDenied)
+    await asUser(ids.principal)
+    assert.equal((await db.query('delete from storage.objects returning name')).rowCount, 0)
+    assert.deepEqual((await db.query('select name from storage.objects')).rows, [{ name: objectName }])
+
+    assert.deepEqual((await selectObjects(ids.teacher)).rows, [{ name: objectName }])
+    for (const [role, id] of [['teacher', otherUserId], ['student', ids.student], ['parent', ids.parent], ['pending', ids.pending]]) {
+      assert.deepEqual((await selectObjects(id)).rows, [], `${role} tidak boleh membaca bukti setelah terbit`)
+    }
+
+    await db.exec('reset role')
+    await db.query('delete from storage.objects')
+  })
+  await t.test('school document storage follows owner and review access', async () => {
+    const otherTeacherId = '10000000-0000-4000-8000-000000000011'
+    const documentId = '80000000-0000-4000-8000-000000000001'
+    const objectName = `${documentId}/80000000-0000-4000-8000-000000000002-rencana.pdf`
+    await db.exec('reset role')
+    await db.query('insert into auth.users (id) values ($1)', [otherTeacherId])
+    await db.query("update public.profiles set role='teacher' where id=$1", [otherTeacherId])
+    const bucket = (await db.query("select public,file_size_limit,allowed_mime_types from storage.buckets where id='school-documents'")).rows[0]
+    assert.equal(bucket.public, false)
+    assert.equal(Number(bucket.file_size_limit), 10485760)
+    assert.deepEqual(bucket.allowed_mime_types, [
+      'application/pdf', 'image/jpeg', 'image/png',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ])
+
+    const asUser = async (id, role = 'authenticated') => {
+      await db.exec('reset role')
+      await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id])
+      await db.exec(`set role ${role}`)
+    }
+    const insertObject = async (bucket, name, id) => {
+      await asUser(id)
+      return db.query('insert into storage.objects (bucket_id,name) values ($1,$2)', [bucket,name])
+    }
+    const selectObjects = async (id, role = 'authenticated') => {
+      await asUser(id,role)
+      return (await db.query("select name from storage.objects where bucket_id='school-documents' order by name")).rows
+    }
+
+    const orphanDraftId = '81000000-0000-4000-8000-000000000001'
+    await db.exec('reset role')
+    await db.query(
+      "insert into public.school_documents (id,owner_profile_id,category,title,file_path,mime_type,file_size) values ($1,$2,'rkt','Data Contoh Draf Gagal',$3,'application/pdf',100)",
+      [orphanDraftId,ids.teacher,`${orphanDraftId}/81000000-0000-4000-8000-000000000002-gagal.pdf`],
+    )
+    await as('teacher')
+    await db.query('select public.discard_unuploaded_school_document_draft($1,0)', [orphanDraftId])
+    await db.exec('reset role')
+    assert.equal((await db.query('select id from public.school_documents where id=$1', [orphanDraftId])).rows.length, 0)
+
+    await db.query(
+      "insert into public.school_documents (id,owner_profile_id,category,title,file_path,mime_type,file_size) values ($1,$2,'rkt','Data Contoh Rencana',$3,'application/pdf',100)",
+      [documentId,ids.teacher,objectName],
+    )
+    assert.equal((await insertObject('school-documents',objectName,ids.teacher)).rowCount, 1)
+    await as('teacher')
+    await assert.rejects(db.query('select public.discard_unuploaded_school_document_draft($1,0)', [documentId]), { code: '55000' })
+    await assert.rejects(insertObject('school-documents','tanpa-folder/berkas.pdf',ids.administrator), permissionDenied)
+    await assert.rejects(insertObject('school-documents',`90000000-0000-4000-8000-000000000001/${objectName.split('/')[1]}`,ids.administrator), permissionDenied)
+    for (const [role,id] of [['administrator',ids.administrator],['principal',ids.principal],['teacher',ids.teacher]]) {
+      assert.deepEqual(await selectObjects(id), [{ name: objectName }], `${role} dapat membaca dokumen sesuai kebijakan`)
+    }
+    for (const [role,id] of [['teacher',otherTeacherId],['student',ids.student],['parent',ids.parent],['pending',ids.pending],['anon','']]) {
+      assert.deepEqual(await selectObjects(id,role === 'anon' ? 'anon' : 'authenticated'), [], `${role} tidak dapat membaca dokumen pemilik lain`)
+    }
+    await assert.rejects(insertObject('school-documents',`${documentId}/80000000-0000-4000-8000-000000000003-lain.pdf`,ids.principal), permissionDenied)
+
+    await as('teacher')
+    await db.query("update public.school_documents set status='submitted' where id=$1", [documentId])
+    await as('principal')
+    await db.query("update public.school_documents set status='approved' where id=$1", [documentId])
+    assert.equal((await db.query('select count(*)::int as n from public.document_versions where document_id=$1', [documentId])).rows[0].n, 1)
+    assert.equal((await db.query('select count(*)::int as n from public.document_reviews where document_id=$1', [documentId])).rows[0].n, 2)
+    await as('administrator')
+    await assert.rejects(db.query("update public.school_documents set status='archived' where id=$1", [documentId]), permissionDenied)
+    assert.equal((await db.query('select count(*)::int as n from public.document_versions where document_id=$1', [documentId])).rows[0].n, 1)
+    await as('teacher')
+    await assert.rejects(insertObject('school-documents',`${documentId}/80000000-0000-4000-8000-000000000003-lain.pdf`,ids.teacher), permissionDenied)
+    assert.deepEqual(await selectObjects(ids.teacher), [{ name: objectName }], 'pemilik tetap dapat membaca setelah disetujui')
+
+    await db.exec('reset role')
+    await db.query("delete from storage.objects where bucket_id='school-documents'")
+    await db.query('delete from public.school_documents where id=$1', [documentId])
+    await db.query('delete from auth.users where id=$1', [otherTeacherId])
   })
   await t.test('teaching modules enforce author edits, principal review, and immutable status audit', async () => {
     await as('teacher')
@@ -1005,6 +1224,303 @@ test('migrations and database permissions', async t => {
       assert.equal((await db.query('select * from public.communication_recipients(0)')).rows.some(row => row.assignment_id === attendanceAssignment && row.student_id === studentOne && row.parent_profile_id === ids.parent), false)
       await assert.rejects(send(), permissionDenied)
     }
+  })
+  await t.test('student habits separate pending from validated and enforce role scope', async () => {
+    await db.exec('reset role')
+    await db.query("update public.students set profile_id=$1 where id=$2", [ids.student, studentOne])
+    await as('administrator')
+    await db.query("select public.set_account_relationship('parent',$1,$2,true,'Data Contoh hubungan')", [studentOne, ids.parent])
+    const pendingDay = `${today.slice(0, 4)}-11-01`
+    const validatedDay = `${today.slice(0, 4)}-11-02`
+    await as('parent')
+    assert.equal((await db.query('select habit_key from public.habit_catalog where active order by sort_order')).rows.length, 7)
+    const parentRow = (await db.query("insert into public.habit_records (student_id,record_date,habits,notes) values ($1,$2,$3,'Data Contoh catatan wali') returning id,validation_status", [studentOne,pendingDay,[true,false,false,false,false,false,false]])).rows[0]
+    assert.equal(parentRow.validation_status, 'pending')
+    const weeklyForParent = (await db.query("select * from public.habit_weekly_summary(date_trunc('week',$1::date)::date,0,$2)", [pendingDay,studentOne])).rows[0]
+    assert.equal(weeklyForParent.days_filled, 1)
+    assert.equal(weeklyForParent.days_expected, 7)
+    assert.equal(weeklyForParent.days_missing, 6)
+    assert.equal(weeklyForParent.bangun_pagi, 1)
+    await as('student')
+    assert.deepEqual((await db.query('select student_id from public.habit_records')).rows, [{ student_id: studentOne }])
+    const studentRow = (await db.query("insert into public.habit_records (student_id,record_date,habits) values ($1,$2,$3) returning validation_status", [studentOne,validatedDay,[false,true,false,false,false,false,false]])).rows[0]
+    assert.equal(studentRow.validation_status, 'pending')
+    await assert.rejects(db.query("update public.habit_records set validation_status='validated',revision=revision+1"), permissionDenied)
+    await as('teacher')
+    assert.equal((await db.query('select * from public.habit_records')).rows.length, 2)
+    assert.equal((await db.query("select student_id from public.habit_weekly_summary(date_trunc('week',$1::date)::date,0,null)", [pendingDay])).rows.some(row => row.student_id === studentOne), true)
+    const validated = (await db.query("update public.habit_records set validation_status='validated',validation_note='Data Contoh konfirmasi',revision=revision+1 where record_date=$1 returning validation_status,validated_by,validated_at", [pendingDay])).rows[0]
+    assert.equal(validated.validation_status, 'validated')
+    assert.equal(validated.validated_by, ids.teacher)
+    assert.ok(validated.validated_at)
+    await as('parent')
+    assert.equal((await db.query("select validation_status from public.habit_records where record_date=$1", [pendingDay])).rows[0].validation_status, 'validated')
+    await assert.rejects(db.query("update public.habit_records set validation_status='validated',revision=revision+1"), permissionDenied)
+    await as('teacher')
+    await db.query("update public.habit_records set validation_status='pending',revision=revision+1 where record_date=$1", [pendingDay])
+    await as('parent')
+    const pendingAgain = (await db.query("select validation_status,validated_by,validated_at,validation_note from public.habit_records where record_date=$1", [pendingDay])).rows[0]
+    assert.deepEqual(pendingAgain, { validation_status: 'pending', validated_by: null, validated_at: null, validation_note: '' })
+    for (const role of ['principal','administrator']) {
+      await as(role)
+      assert.equal((await db.query('select * from public.habit_records')).rows.length, 2)
+      assert.equal((await db.query("update public.habit_records set validation_status='validated',revision=revision+1 returning id")).rows.length, 0)
+    }
+    await as('pending')
+    assert.equal((await db.query('select * from public.habit_records')).rows.length, 0)
+    assert.equal((await db.query('select * from public.habit_catalog')).rows.length, 0)
+    await as('anon')
+    await assert.rejects(db.query('select * from public.habit_records'), permissionDenied)
+    await assert.rejects(db.query('select * from public.habit_catalog'), permissionDenied)
+  })
+  await t.test('habit_students returns only the caller’s authorized student names', async () => {
+    await db.exec('reset role')
+    await as('administrator')
+    const linkedStudent = studentOne
+    const studentThree = (await db.query(
+      "insert into public.students (code,name) values ('HABIT_OTHER','Data Contoh Kebiasaan Lain') returning id",
+    )).rows[0].id
+    const linkedName = (await db.query('select name from public.students where id=$1', [linkedStudent])).rows[0].name
+    const read = async () => (await db.query('select id,name from public.habit_students() order by name,id')).rows
+    const readFixtures = async () => (await read()).filter(row => [linkedStudent,studentTwo,studentThree].includes(row.id))
+    await as('student')
+    assert.equal((await db.query('select role from public.profiles where id=auth.uid()')).rows[0].role, 'student')
+    assert.deepEqual(await readFixtures(), [{ id: linkedStudent, name: linkedName }], 'siswa hanya melihat dirinya sendiri')
+    await as('teacher')
+    assert.deepEqual(await readFixtures(), [
+      { id: studentTwo, name: 'Data Contoh Dua' },
+      { id: linkedStudent, name: linkedName },
+    ])
+    const noAssignmentUser = '10000000-0000-4000-8000-000000000010'
+    await db.exec('reset role')
+    await db.query('insert into auth.users (id) values ($1)', [noAssignmentUser])
+    await db.query("update public.profiles set role='teacher' where id=$1", [noAssignmentUser])
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [noAssignmentUser])
+    await db.exec('set role authenticated')
+    assert.deepEqual(await read(), [], 'guru tanpa registrasi/penugasan tidak menerima seluruh daftar')
+    await as('parent')
+    assert.deepEqual(await readFixtures(), [{ id: linkedStudent, name: linkedName }])
+    await as('principal')
+    assert.deepEqual(await readFixtures(), [
+      { id: studentTwo, name: 'Data Contoh Dua' },
+      { id: studentThree, name: 'Data Contoh Kebiasaan Lain' },
+      { id: linkedStudent, name: linkedName },
+    ])
+    await as('administrator')
+    assert.deepEqual(await readFixtures(), [
+      { id: studentTwo, name: 'Data Contoh Dua' },
+      { id: studentThree, name: 'Data Contoh Kebiasaan Lain' },
+      { id: linkedStudent, name: linkedName },
+    ])
+
+    await db.exec('reset role')
+    await db.query('delete from auth.users where id=$1', [noAssignmentUser])
+    await db.query("update public.profiles set role='parent' where id=$1", [ids.pending])
+    await as('pending')
+    assert.deepEqual(await read(), [])
+    await as('anon')
+    await assert.rejects(read(), permissionDenied)
+    await db.exec('reset role')
+    await db.query("update public.profiles set role='pending' where id=$1", [ids.pending])
+    await db.query('delete from public.students where id=$1', [studentThree])
+  })
+  await t.test('guardian reports require teacher confirmation to mark absence and rejection leaves attendance unchanged', async () => {
+    const requestId = '20000000-0000-4000-8000-000000000001'
+    const reportDay = today
+    await as('parent')
+    const report = (await db.query("insert into public.guardian_absence_reports (request_id,student_id,report_date,reason) values ($1,$2,$3,'Data Contoh alasan') returning id,status,revision", [requestId,studentOne,reportDay])).rows[0]
+    assert.equal(report.status, 'submitted')
+    assert.equal(report.revision, 0)
+    await assert.rejects(db.query("update public.guardian_absence_reports set status='confirmed'"), permissionDenied)
+    await as('teacher')
+    assert.equal((await db.query('select id from public.guardian_absence_reports')).rows.length, 1)
+    await assert.rejects(db.query('select public.review_guardian_absence_report($1,0,null,$2)', [report.id,'Data Contoh catatan']), { code: '22023' })
+    const beforeAttendance = (await db.query('select r.status,r.revision from public.attendance_records r join public.attendance_sessions s on s.id=r.session_id where r.student_id=$1 and s.held_on=$2', [studentOne, reportDay])).rows[0]
+    const reviewed = (await db.query("select (public.review_guardian_absence_report($1,0,'confirmed','Data Contoh dikonfirmasi')).status", [report.id])).rows[0].status
+    assert.equal(reviewed, 'confirmed')
+    const attendance = (await db.query('select r.status,r.revision from public.attendance_records r join public.attendance_sessions s on s.id=r.session_id where r.student_id=$1 and s.held_on=$2', [studentOne, reportDay])).rows[0]
+    assert.equal(attendance.status, 'absent')
+    assert.equal(attendance.revision, beforeAttendance.revision + (beforeAttendance.status === 'absent' ? 0 : 1))
+    const audit = (await db.query("select old_status,new_status,reason from public.attendance_changes where record_id=(select r.id from public.attendance_records r join public.attendance_sessions s on s.id=r.session_id where r.student_id=$1 and s.held_on=$2) and reason='Verifikasi laporan wali: Data Contoh dikonfirmasi'", [studentOne, reportDay])).rows[0]
+    if (beforeAttendance.status === 'absent') assert.equal(audit, undefined)
+    else assert.deepEqual(audit, { old_status: beforeAttendance.status, new_status: 'absent', reason: 'Verifikasi laporan wali: Data Contoh dikonfirmasi' })
+    await assert.rejects(db.query("select public.review_guardian_absence_report($1,0,'confirmed','Data Contoh')", [report.id]), { code: '40001' })
+    await as('parent')
+    const rejection = (await db.query("insert into public.guardian_absence_reports (request_id,student_id,report_date,reason) values ('20000000-0000-4000-8000-000000000003',$1,$2,'Data Contoh alasan kedua') returning id,status,revision", [studentOne,reportDay])).rows[0]
+    await as('teacher')
+    const beforeRejection = (await db.query('select r.status,r.revision from public.attendance_records r join public.attendance_sessions s on s.id=r.session_id where r.student_id=$1 and s.held_on=$2', [studentOne,reportDay])).rows[0]
+    const rejected = (await db.query("select (public.review_guardian_absence_report($1,0,'rejected','Data Contoh ditolak')).status", [rejection.id])).rows[0].status
+    assert.equal(rejected,'rejected')
+    assert.deepEqual((await db.query('select r.status,r.revision from public.attendance_records r join public.attendance_sessions s on s.id=r.session_id where r.student_id=$1 and s.held_on=$2', [studentOne,reportDay])).rows[0],beforeRejection)
+    await assert.rejects(db.query("select public.review_guardian_absence_report($1,0,'rejected','Data Contoh')", [rejection.id]), { code: '40001' })
+    await as('parent')
+    const oldDay = (await db.query('select $1::date - 1 as day', [today])).rows[0].day
+    const oldReport = (await db.query("insert into public.guardian_absence_reports (request_id,student_id,report_date,reason) values ('20000000-0000-4000-8000-000000000002',$1,$2,'Data Contoh alasan lama') returning id,status,revision", [studentOne, oldDay])).rows[0]
+    await as('teacher')
+    await assert.rejects(db.query("select public.review_guardian_absence_report($1,0,'confirmed','Data Contoh diverifikasi')", [oldReport.id]), { code: '55000' })
+    const unchanged = (await db.query('select status,revision from public.guardian_absence_reports where id=$1', [oldReport.id])).rows[0]
+    assert.deepEqual(unchanged, { status: 'submitted', revision: 0 })
+    await as('administrator')
+    await db.query("select public.set_account_relationship('parent',$1,$2,false,'Data Contoh pencabutan akses laporan')", [studentOne, ids.parent])
+    await as('parent')
+    assert.equal((await db.query('select id from public.guardian_absence_reports')).rows.length, 0)
+    await as('administrator')
+    await db.query("select public.set_account_relationship('parent',$1,$2,true,'Data Contoh pemulihan akses laporan')", [studentOne, ids.parent])
+    await as('student')
+    assert.equal((await db.query('select * from public.guardian_absence_reports')).rows.length, 0)
+    await as('pending')
+    assert.equal((await db.query('select * from public.guardian_absence_reports')).rows.length, 0)
+    await as('anon')
+    await assert.rejects(db.query('select * from public.guardian_absence_reports'), permissionDenied)
+  })
+  await t.test('notifications are private to the recipient and read through a server function', async () => {
+    await db.exec('reset role')
+    await db.query('delete from public.notifications')
+    await as('principal')
+    await db.query("insert into public.announcements (title,body,status) values ('Data Contoh judul sensitif','Data Contoh isi sensitif','draft')")
+    await db.query("update public.announcements set status='published' where title='Data Contoh judul sensitif'")
+
+    const documentId = '80000000-0000-4000-8000-000000000021'
+    await db.exec('reset role')
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [ids.teacher])
+    await db.query(
+      "insert into public.school_documents (id,category,title,file_path,mime_type,file_size) values ($1,'rkt','RAHASIA-DOKUMEN',$2,'application/pdf',100)",
+      [documentId, `${documentId}/80000000-0000-4000-8000-000000000022-rencana.pdf`],
+    )
+    await as('teacher')
+    await db.query("update public.school_documents set status='submitted' where id=$1", [documentId])
+    await as('principal')
+    await db.query("update public.school_documents set status='approved' where id=$1", [documentId])
+
+    await db.exec('reset role')
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [ids.teacher])
+    const moduleId = (await db.query(
+      "insert into public.teaching_modules (assignment_id,title,objectives,activities) values ($1,'RAHASIA-MODUL','Tujuan contoh','Kegiatan contoh') returning id",
+      [attendanceAssignment],
+    )).rows[0].id
+    await as('teacher')
+    await db.query("update public.teaching_modules set status='submitted' where id=$1", [moduleId])
+    await as('principal')
+    await db.query("update public.teaching_modules set status='approved' where id=$1", [moduleId])
+
+    await as('principal')
+    const supervisionId = (await db.query(
+      "insert into public.academic_supervisions (teacher_id,scheduled_on,focus) values ($1,$2,'Data Contoh') returning id",
+      [teacherOne, today],
+    )).rows[0].id
+    await db.query("update public.academic_supervisions set stage=2,preparation='Data Contoh' where id=$1", [supervisionId])
+    await db.query("update public.academic_supervisions set stage=3,planning_score=2,instruction_score=3,assessment_score=4,observation_notes='Data Contoh' where id=$1", [supervisionId])
+    await db.query("update public.academic_supervisions set stage=4,reflection='Data Contoh',feedback='RAHASIA-SUPERVISI',follow_up_plan='Data Contoh',target_on=scheduled_on where id=$1", [supervisionId])
+    await db.query("update public.academic_supervisions set follow_up_status='complete',follow_up_evaluation='Data Contoh' where id=$1", [supervisionId])
+    await db.query('update public.academic_supervisions set published_at=now() where id=$1', [supervisionId])
+
+    await as('parent')
+    const reportId = (await db.query(
+      "insert into public.guardian_absence_reports (request_id,student_id,report_date,reason) values ('40000000-0000-4000-8000-000000000021',$1,$2,'RAHASIA-ALASAN') returning id",
+      [studentOne, today],
+    )).rows[0].id
+    const messageId = (await db.query(
+      "insert into public.communication_messages (assignment_id,student_id,parent_profile_id,body) values ($1,$2,$3,'RAHASIA-PESAN') returning id",
+      [attendanceAssignment, studentOne, ids.parent],
+    )).rows[0].id
+
+    await as('principal')
+    const principalNotifications = (await db.query(
+      "select category,title,body,reference_type,reference_id from public.notifications order by created_at,id",
+    )).rows
+    assert.ok(principalNotifications.some(row => row.category === 'document' && row.reference_id === documentId), 'dokumen yang dikirim memberi tahu kepala sekolah')
+    assert.ok(principalNotifications.some(row => row.category === 'teaching_module' && row.reference_id === moduleId), 'modul ajar yang dikirim memberi tahu kepala sekolah')
+    assert.ok(principalNotifications.every(row => !/RAHASIA-(DOKUMEN|MODUL|SUPERVISI|ALASAN|PESAN)/.test(`${row.title} ${row.body}`)), 'isi sumber sensitif tidak disalin ke notifikasi kepala sekolah')
+
+    await as('teacher')
+    const teacherNotifications = (await db.query(
+      "select category,title,body,reference_type,reference_id from public.notifications order by created_at,id",
+    )).rows
+    for (const [category, referenceId] of [
+      ['document', documentId], ['teaching_module', moduleId], ['supervision', supervisionId],
+      ['absence_report', reportId], ['communication', messageId],
+    ]) {
+      assert.ok(teacherNotifications.some(row => row.category === category && row.reference_id === referenceId), `${category} menerbitkan notifikasi kepada penerima yang benar`)
+    }
+    assert.ok(teacherNotifications.every(row => !/RAHASIA-(DOKUMEN|MODUL|SUPERVISI|ALASAN|PESAN)/.test(`${row.title} ${row.body}`)), 'isi sumber sensitif tidak disalin ke notifikasi guru')
+
+    await db.exec('reset role')
+    const notification = (await db.query("insert into public.notifications (recipient_profile_id,category,priority,title,body) values ($1,'system','important','Data Contoh','Data Contoh isi') returning id,read_at", [ids.parent])).rows[0]
+    await as('parent')
+    const parentNotifications = (await db.query('select id,title,body,reference_type,reference_id from public.notifications order by created_at,id')).rows
+    assert.equal(parentNotifications.length, 2)
+    assert.equal(parentNotifications.some(row => row.body.includes('isi sensitif') || row.title.includes('judul sensitif')), false)
+    assert.equal(parentNotifications.some(row => row.reference_type === 'announcement' && row.reference_id), true)
+    const read = (await db.query('select (public.mark_notification_read($1)).read_at', [notification.id])).rows[0].read_at
+    assert.ok(read)
+    await as('student')
+    assert.equal((await db.query('select id from public.notifications where id=$1', [notification.id])).rows.length, 0)
+    await assert.rejects(db.query('select public.mark_notification_read($1)', [notification.id]), { code: 'P0002' })
+    await as('anon')
+    await assert.rejects(db.query('select * from public.notifications'), permissionDenied)
+  })
+  await t.test('teacher attendance is idempotent, private, and corrected only by principal approval', async () => {
+    const checkInRequest = '71000000-0000-4000-8000-000000000001'
+    const checkOutRequest = '71000000-0000-4000-8000-000000000002'
+    const correctionRequest = '71000000-0000-4000-8000-000000000003'
+    await as('teacher')
+    const checkedIn = (await db.query("select * from public.record_teacher_attendance('check_in',$1)", [checkInRequest])).rows[0]
+    const checkedInRetry = (await db.query("select * from public.record_teacher_attendance('check_in',$1)", [checkInRequest])).rows[0]
+    assert.equal(checkedInRetry.id, checkedIn.id)
+    const checkedOut = (await db.query("select * from public.record_teacher_attendance('check_out',$1)", [checkOutRequest])).rows[0]
+    assert.equal(checkedOut.id, checkedIn.id)
+    assert.ok(checkedOut.check_out_at)
+    assert.equal((await db.query('select event_type from public.teacher_attendance_events where attendance_id=$1 order by created_at', [checkedIn.id])).rows.length, 2)
+
+    const proposedIn = `${today}T08:00:00+07:00`
+    const proposedOut = `${today}T14:00:00+07:00`
+    const correction = (await db.query(
+      'select * from public.request_teacher_attendance_correction($1,$2,$3,$4,$5)',
+      [correctionRequest,today,proposedIn,proposedOut,'Data Contoh koreksi jam'],
+    )).rows[0]
+    const retry = (await db.query(
+      'select * from public.request_teacher_attendance_correction($1,$2,$3,$4,$5)',
+      [correctionRequest,today,proposedIn,proposedOut,'Data Contoh koreksi jam'],
+    )).rows[0]
+    assert.equal(retry.id, correction.id)
+    await as('parent')
+    assert.equal((await db.query('select id from public.teacher_attendance_corrections where id=$1', [correction.id])).rows.length, 0)
+    await as('administrator')
+    await assert.rejects(db.query("select public.review_teacher_attendance_correction($1,0,'approved','')", [correction.id]), permissionDenied)
+    await as('principal')
+    const approved = (await db.query("select (public.review_teacher_attendance_correction($1,0,'approved','Tinjauan selesai')).status", [correction.id])).rows[0].status
+    assert.equal(approved, 'approved')
+    await assert.rejects(db.query("select public.review_teacher_attendance_correction($1,0,'approved','Tinjauan ulang')", [correction.id]), { code: '40001' })
+    await as('teacher')
+    const corrected = (await db.query('select check_in_at,check_out_at from public.teacher_attendance where id=$1', [checkedIn.id])).rows[0]
+    assert.equal(new Date(corrected.check_in_at).toISOString(), new Date(proposedIn).toISOString())
+    assert.equal(new Date(corrected.check_out_at).toISOString(), new Date(proposedOut).toISOString())
+    await db.exec('reset role')
+    await db.query("update public.teachers set is_active=false where profile_id=$1", [ids.teacher])
+    await as('teacher')
+    assert.equal((await db.query('select * from public.teacher_attendance')).rows.length, 0)
+    await assert.rejects(db.query("select public.record_teacher_attendance('check_in',$1)", ['71000000-0000-4000-8000-000000000005']), permissionDenied)
+    await db.exec('reset role')
+    await db.query("update public.teachers set is_active=true where profile_id=$1", [ids.teacher])
+  })
+  await t.test('operator retention order unlinks and deactivates before deleting a synthetic Auth user', async () => {
+    const authId = '72000000-0000-4000-8000-000000000001'
+    await db.exec('reset role')
+    await db.query('insert into auth.users(id) values($1)', [authId])
+    await db.query("update public.profiles set role='student' where id=$1", [authId])
+    const studentId = (await db.query(
+      "insert into public.students(code,name,profile_id,created_by) values('RETENSI_UJI','Data Contoh Retensi', $1, $2) returning id", [authId,ids.administrator],
+    )).rows[0].id
+    await db.exec('begin')
+    await db.query('update public.students set profile_id=null where id=$1', [studentId])
+    await db.query('update public.students set is_active=false where id=$1', [studentId])
+    await db.exec('commit')
+    assert.deepEqual((await db.query('select is_active,profile_id from public.students where id=$1', [studentId])).rows[0], { is_active: false, profile_id: null })
+    await db.query('delete from auth.users where id=$1', [authId])
+    const retained = (await db.query('select is_active,profile_id from public.students where id=$1', [studentId])).rows[0]
+    assert.deepEqual(retained, { is_active: false, profile_id: null })
+    assert.equal((await db.query('select id from public.profiles where id=$1', [authId])).rows.length, 0)
+    await db.query('delete from public.students where id=$1', [studentId])
   })
   await t.test('removing a school role immediately removes read access', async () => {
     await db.exec('reset role')

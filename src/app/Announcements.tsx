@@ -1,8 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { getDemoAnnouncements, getDemoProfile } from '../lib/demo-auth'
 import { supabase } from '../lib/supabase'
-import { useAuth } from './Auth'
+import { useAuth } from '../components/auth/auth-context'
 import { announcementStatuses, canManageAnnouncements, canReadAnnouncements, validateAnnouncement, type Announcement, type AnnouncementStatus } from '../lib/announcements'
 
 const pageSize = 10
@@ -36,14 +35,8 @@ function AnnouncementBoard({ userId }: { userId: string }) {
 
     const client = supabase
     if (!client) {
-      const demoProfile = getDemoProfile(userId)
-      const demoItems = getDemoAnnouncements() as Announcement[]
       if (active) {
-        setRole(demoProfile?.role ?? null)
-        if (canReadAnnouncements(demoProfile?.role ?? null)) {
-          setItems(demoItems.slice(page * pageSize, page * pageSize + pageSize))
-          setHasNext(demoItems.length > pageSize)
-        }
+        setError('Konfigurasi Supabase belum tersedia. Periksa pengaturan sekolah.')
         setLoading(false)
       }
       return () => { active = false }
@@ -81,21 +74,7 @@ function AnnouncementBoard({ userId }: { userId: string }) {
     const payload = { title: editor.title.trim(), body: editor.body.trim(), status: editor.status }
 
     if (!supabase) {
-      const nextItems = [
-        {
-          id: editor.id ?? `demo-ann-${Date.now()}`,
-          title: payload.title,
-          body: payload.body,
-          status: payload.status,
-          created_at: new Date().toISOString(),
-        },
-        ...getDemoAnnouncements().filter((item) => item.id !== editor.id),
-      ] as Announcement[]
-      setItems(nextItems.slice(0, pageSize))
-      setEditor(null)
-      setPage(0)
-      setAttempt(value => value + 1)
-      setMessage('Pengumuman berhasil disimpan.')
+      setSaveError('Konfigurasi Supabase belum tersedia. Periksa pengaturan sekolah.')
       setSaving(false)
       return
     }

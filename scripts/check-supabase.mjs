@@ -22,7 +22,10 @@ async function check() {
     'teaching_modules', 'teaching_module_events', 'academic_supervisions', 'academic_supervision_events',
     'class_materials', 'task_submissions', 'task_feedback', 'task_feedback_events',
     'assessments', 'assessment_results', 'assessment_result_events',
-    'lesson_schedules', 'lesson_schedule_events', 'schedule_proposals', 'todos',
+    'lesson_schedules', 'lesson_schedule_events', 'schedule_proposals',
+    'habit_records', 'habit_events', 'habit_catalog', 'guardian_absence_reports', 'notifications', 'school_documents',
+    'document_categories', 'document_versions', 'document_reviews', 'school_document_events',
+    'teacher_attendance', 'teacher_attendance_corrections', 'teacher_attendance_events',
   ]) {
     const column = table === 'parent_student_relationships' ? 'student_id' : 'id'
     const result = await fetch(new URL(`/rest/v1/${table}?select=${column}&limit=0`, url), {
@@ -33,6 +36,14 @@ async function check() {
     if (failure.code !== '42501') throw new Error(`Tabel ${table}: penolakan belum dapat dikonfirmasi sebagai izin database.`)
     console.log(`Tabel ${table}: Data API menolak akses anonim sesuai rancangan.`)
   }
+  const dashboardRpc = await fetch(new URL('/rest/v1/rpc/dashboard_overview', url), {
+    method: 'POST', headers: { apikey: key, 'content-type': 'application/json' }, body: '{}',
+    signal: AbortSignal.timeout(15000), redirect: 'error',
+  })
+  if (![401, 403].includes(dashboardRpc.status)) throw new Error(`RPC dashboard_overview: harapkan penolakan akses anonim, mendapat HTTP ${dashboardRpc.status}. Periksa grant dan migration.`)
+  const dashboardFailure = await dashboardRpc.json()
+  if (dashboardFailure.code !== '42501') throw new Error('RPC dashboard_overview: penolakan belum dapat dikonfirmasi sebagai izin database.')
+  console.log('RPC dashboard_overview: Data API menolak akses anonim sesuai rancangan.')
   console.log('Pemeriksaan ini tidak membaca baris data. Alur email dan sesi pengguna tetap perlu pengujian dengan akun sekolah.')
 }
 

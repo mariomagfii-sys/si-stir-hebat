@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useAuth } from '../../lib/auth-context'
+import { useAuth } from '../../components/auth/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { TruncationNotice } from '../../components/ui/TruncationNotice'
 import { supabase } from '../../lib/supabase'
-import { schoolToday } from '../attendance/attendance-model'
+import { schoolToday } from '../../utils/date'
+import { canReadAbsenceReports, isParent, isTeacher } from '../../utils/permissions'
 import {
   daftarLaporanKetidakhadiran,
   kirimLaporanKetidakhadiran,
@@ -14,7 +16,7 @@ import {
 const statusLabels: Record<GuardianAbsenceReport['status'], string> = {
   submitted: 'Menunggu pemeriksaan guru',
   confirmed: 'Dikonfirmasi',
-  needs_revision: 'Perlu perbaikan',
+  rejected: 'Ditolak',
 }
 
 type StudentName = { id: string; name: string }
@@ -60,8 +62,8 @@ export function AbsenceReports() {
       try {
         const profile = await client.from('profiles').select('role').eq('id', session.user.id).maybeSingle()
         if (profile.error) throw profile.error
-        const role = profile.data?.role as Role | undefined
-        if (role !== 'parent' && role !== 'teacher' && role !== 'principal' && role !== 'administrator') {
+        const role = profile.data?.role
+        if (!canReadAbsenceReports(role)) {
           if (active) setPageState({ state: 'denied' })
           return
         }
@@ -72,8 +74,8 @@ export function AbsenceReports() {
         ])
         if (!active) return
         const studentNames = students.error ? [] : (students.data as StudentName[] ?? [])
-        setPageState({ state: 'ready', role, students: studentNames, items: reports.items, hasMore: reports.hasMore })
-        if (role === 'parent' && studentNames.length) {
+        setPageState({ state: 'ready', role: role as Role, students: studentNames, items: reports.items, hasMore: reports.hasMore })
+        if (isParent(role) && studentNames.length) {
           setStudentId((previous) => previous || studentNames[0].id)
         }
       } catch {
@@ -104,7 +106,7 @@ export function AbsenceReports() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const client = supabase
-    if (!client || pageState.state !== 'ready' || pageState.role !== 'parent') return
+    if (!client || pageState.state !== 'ready' || !isParent(pageState.role)) return
     if (saving) return
 
     const request: PendingRequest = pendingRequest ?? { request_id: crypto.randomUUID(), student_id: studentId, report_date: reportDate, reason }
@@ -137,9 +139,9 @@ export function AbsenceReports() {
     }
   }
 
-  async function review(item: GuardianAbsenceReport, decision: 'confirmed' | 'needs_revision') {
+  async function review(item: GuardianAbsenceReport, decision: 'confirmed' | 'rejected') {
     const client = supabase
-    if (!client || pageState.state !== 'ready' || pageState.role !== 'teacher' || reviewing) return
+    if (!client || pageState.state !== 'ready' || !isTeacher(pageState.role) || reviewing) return
     const note = (notes[item.id] ?? '').trim()
     if (!note) { setReviewError('Catatan pemeriksa wajib diisi sebelum memutuskan.'); return }
 
@@ -152,7 +154,7 @@ export function AbsenceReports() {
         ? { ...current, items: current.items.map(row => row.id === updated.id ? updated : row) }
         : current)
       setNotes(current => ({ ...current, [item.id]: '' }))
-      setSuccess(decision === 'confirmed' ? 'Laporan dikonfirmasi.' : 'Laporan dikembalikan untuk perbaikan.')
+      setSuccess(decision === 'confirmed' ? 'Laporan dikonfirmasi.' : 'Laporan ditolak; status absensi tidak berubah.')
     } catch (error) {
       const code = errorCode(error)
       setReviewError(code === '40001'
@@ -173,12 +175,12 @@ export function AbsenceReports() {
 
   const { role, students, items, hasMore } = pageState
   const nameById = new Map(students.map(student => [student.id, student.name]))
-  const isParent = role === 'parent'
-  const canReview = role === 'teacher'
+  const parentView = isParent(role)
+  const canReview = isTeacher(role)
 
   return <section className="board">
     {heading}
-    {isParent && <>
+    {parentView && <>
       {students.length === 0
         ? <EmptyState>Belum ada anak tertaut aktif. Hubungi administrator sekolah untuk verifikasi relasi.</EmptyState>
         : <form className="announcement-editor" onSubmit={submit}>
@@ -200,16 +202,16 @@ export function AbsenceReports() {
           {success && <p className="status" role="status">{success}</p>}
         </form>}
     </>}
-    {!isParent && <>
+    {!parentView && <>
       {success && <p className="status" role="status">{success}</p>}
       {reviewError && <p className="error" role="alert">{reviewError} <button className="text-button" type="button" onClick={refresh} disabled={Boolean(reviewing)}>Kembali ke daftar laporan</button></p>}
       <p className="help">{canReview ? 'Anda hanya melihat laporan murid pada kelas yang ditugaskan. Catatan pemeriksa wajib diisi 1–1.000 karakter.' : 'Anda melihat seluruh laporan sebagai pembaca. Keputusan pemeriksaan hanya untuk guru kelas.'} <button className="text-button" type="button" onClick={refresh} disabled={Boolean(reviewing)}>Muat ulang daftar</button></p>
     </>}
 
     <section aria-labelledby="absence-list">
-      <h2 id="absence-list">{isParent ? 'Laporan keluarga Anda' : 'Laporan masuk'}</h2>
+      <h2 id="absence-list">{parentView ? 'Laporan keluarga Anda' : 'Laporan masuk'}</h2>
       {items.length === 0
-        ? <EmptyState>{page > 0 ? 'Tidak ada laporan pada halaman ini.' : isParent ? 'Belum ada laporan ketidakhadiran dari akun Anda.' : 'Belum ada laporan ketidakhadiran yang dapat Anda periksa.'}</EmptyState>
+        ? <EmptyState>{page > 0 ? 'Tidak ada laporan pada halaman ini.' : parentView ? 'Belum ada laporan ketidakhadiran dari akun Anda.' : 'Belum ada laporan ketidakhadiran yang dapat Anda periksa.'}</EmptyState>
         : <div className="announcement-list">{items.map(item => <article className="announcement" key={item.id}>
           <div className="announcement-meta">
             <time dateTime={item.report_date}>{new Date(`${item.report_date}T00:00:00+07:00`).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric' })}</time>
@@ -223,13 +225,14 @@ export function AbsenceReports() {
             <textarea id={`note-${item.id}`} rows={3} maxLength={1000} value={notes[item.id] ?? ''} onChange={event => setNotes(current => ({ ...current, [item.id]: event.target.value }))} disabled={Boolean(reviewing)} />
             <div className="button-row">
               <button className="button" type="button" disabled={Boolean(reviewing)} onClick={() => void review(item, 'confirmed')}>{reviewing === item.id ? 'Menyimpan…' : 'Konfirmasi laporan'}</button>
-              <button className="button secondary" type="button" disabled={Boolean(reviewing)} onClick={() => void review(item, 'needs_revision')}>Kembalikan untuk perbaikan</button>
+              <button className="button secondary" type="button" disabled={Boolean(reviewing)} onClick={() => void review(item, 'rejected')}>Tolak laporan</button>
             </div>
           </div>}
         </article>)}</div>}
+      <TruncationNotice hasMore={hasMore}/>
       {(page > 0 || hasMore) && <nav className="pagination" aria-label="Halaman laporan ketidakhadiran">
         <button className="text-button" type="button" disabled={page === 0 || Boolean(reviewing)} onClick={() => changePage(page - 1)}>Sebelumnya</button>
-        <span>Halaman {page + 1}</span>
+        <span aria-live="polite">Halaman {page + 1}</span>
         <button className="text-button" type="button" disabled={!hasMore || Boolean(reviewing)} onClick={() => changePage(page + 1)}>Berikutnya</button>
       </nav>}
     </section>

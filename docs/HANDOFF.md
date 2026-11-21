@@ -83,3 +83,19 @@ Dokumen ini adalah antrean kerja lintas agen untuk temuan audit 14 November 2026
 - Sesi dijeda atas permintaan pemilik. Suite penuh terakhir **belum** selesai: `test-results-kilo-8.log` berhenti di 36/202 (bukan 202/202). Skenario baru modul ajar lulus terarah di desktop.
 - `docs/MASTER_PROMPT_MULTI_AI.md` ditambahkan sebagai acuan agen (Qoder, Copilot, Kilo) beserta pembagian 16 lapisan.
 - Langkah berikut (sesi lanjutan): tuntaskan run penuh di port khusus saat repo tenang, perbarui `QA_COVERAGE`, lalu L08 (verifikasi `verify.yml`) dan L07/L13 (runbook).
+
+### 15 November 2026 — Copilot (lanjutan)
+
+- Selesai lokal: demo hanya aktif di DEV tanpa Supabase; build produksi memakai stub tanpa akun demo dan memeriksa bundel. UI Komunikasi mempertahankan request ID/isian ketika respons hilang, memeriksa pesan sebelum retry, serta menyediakan pagination 25 baris. Tes unit dan browser terarah ditambahkan.
+- Verifikasi `npm run check`: lulus, 116 tes unit/database, lint, typecheck, gerbang migration/CI, build dan pemeriksaan bundel. Dua tes Komunikasi lulus desktop dan ponsel.
+- Suite browser penuh: 212/216; 4 gagal saat teardown trace dengan `ENOENT`, lalu 4/4 lulus saat diulang terarah. Tidak mengklaim run penuh bersih.
+- Tidak ada migration, data hosted, akun, push, atau deployment yang diubah. Keputusan akses Storage/draf, retensi anak, pengawasan/retensi Komunikasi dan konfirmasi akhir migration tetap menunggu pemilik.
+- Worktree tetap bercampur di `ai/qoder-docs-sync` dengan perubahan staged, unstaged, dan untracked dari beberapa pekerjaan; jangan commit atau bersihkan sebelum pemilik perubahan mengonfirmasi pemisahan.
+- Berikutnya: tinjau/pecah worktree; selesaikan keputusan RBAC dan retensi; lalu jalankan UAT serta smoke produksi dengan akses pemilik. Administrasi dokumen tetap belum dibuat.
+
+## Handoff Codex backend — 20 November 2026
+
+- Keputusan stack terbaru: React/Vite, Next.js dilarang. Keputusan aktif terdapat pada pembukaan `docs/DECISIONS.md`; teks handoff lama tetap sebagai riwayat.
+- Bukti read-only hosted: 23 versi sama dengan awal lokal, `todos` kosong, Security Advisor satu WARN `auth_leaked_password_protection`. Belum ada migration hosted yang diterapkan.
+- Lokal: 35 migration, 129/129 `npm test`, 70/70 PGlite database. Full `npm run check` menunggu Qoder menambah tiga label kategori di NotificationCenter; detail ada di `docs/AI_COORDINATION.md`.
+- X6 absensi guru dan RPC dashboard/performa belum dibangun. Konflik otomasi status final dengan D7 dipertahankan terbuka. Retensi terdokumentasi tetapi belum diuji Supabase lokal; deployment/merge belum dijalankan.

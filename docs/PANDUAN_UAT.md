@@ -4,7 +4,7 @@ Status: rancangan pengujian — belum dijalankan pada akun sekolah nyata
 Tanggal: 14 November 2026
 Penulis: Qoder
 
-Panduan ini hanya memuat fitur yang benar-benar ada di aplikasi. Modul komunikasi, administrasi dokumen, dan kebiasaan siswa **belum memiliki UI** dan tidak termasuk di sini. Pengujian otomatis (unit/database dan browser tiruan) tidak menggantikan UAT ini.
+Panduan ini hanya memuat fitur yang benar-benar ada di aplikasi. Per 20 November 2026, UI komunikasi, kebiasaan siswa, notifikasi, dan laporan ketidakhadiran wali sudah ada dan termasuk pada bagian 9; modul administrasi dokumen **belum memiliki UI** (backend C2 belum REVIEW) dan tidak termasuk di sini. Panduan pengguna: `docs/MANUAL_PENGGUNA.md`. Pengujian otomatis (unit/database dan browser tiruan) tidak menggantikan UAT ini.
 
 ## 1. Prasyarat
 
@@ -41,6 +41,12 @@ Isi kolom **Hasil** dengan `Lulus`, `Gagal`, atau `Terblokir`, diikuti tanggal d
 | UM-06 | Tanpa login, buka `/dashboard`, `/sekolah`, `/absensi`, `/asesmen`. | Dialihkan ke `/login`; tidak ada data yang tampil. | |
 | UM-07 | Buka aplikasi produksi dan periksa panel login. | **Tidak** ada panel "Mode demo aktif" dan tidak ada akun sintetis `admin@sdn03.sch.id` dkk. | |
 | UM-08 | Ulangi satu alur utama pada viewport 390×844 dan dengan keyboard saja. | Tidak ada gulir horizontal; fokus terlihat; label formulir terbaca pembaca layar; dialog konfirmasi dapat ditutup dengan Escape. | |
+| UM-09 | Buka `/notifikasi` sebagai A, K, G, S, W. | Hanya notifikasi milik akun sendiri, 25 baris per halaman; "Tandai sudah dibaca" bertahan setelah muat ulang. | |
+| UM-10 | Putuskan koneksi saat menandai notifikasi, lalu ulangi. | Notifikasi tidak hilang; galat menyebut judulnya; percobaan ulang berhasil. | |
+| UM-11 | S atau W buka `/kebiasaan`, simpan catatan hari ini; G validasi. | Catatan tersimpan per tanggal; status berpindah dari "Menunggu validasi guru" ke "Tervalidasi". | |
+| UM-12 | W buka `/laporan-ketidakhadiran`, kirim laporan sakit/izin; G tinjau dan konfirmasi. | Laporan tersimpan dan tampil ke wali; guru kelas dapat mengonfirmasi dengan catatan; tanggal mendatang ditolak. | |
+
+Catatan 20 November 2026: baris UM-09 sampai UM-11 dan seluruh skenario modul baru di [UAT_CHECKLIST.md](UAT_CHECKLIST.md) bagian 9 **belum dijalankan dengan akun sekolah nyata**. Tabel `notifications`, `guardian_absence_reports`, `habit_records` versi validasi, dan `school_documents` belum diterapkan hosted.
 
 ## 4. Akun pending (P)
 

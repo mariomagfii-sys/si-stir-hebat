@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, BookOpen, CalendarDays, ClipboardCheck, ClipboardList, Eye, FileText, KeyRound, Link2, MessageSquare, PenLine, ShieldCheck, UserCheck, UserRound, type LucideIcon } from 'lucide-react'
-import { useAuth } from '../lib/auth-context'
-import { getDemoAnnouncements, getDemoProfile } from '../lib/demo-auth'
+import { useAuth } from '../components/auth/auth-context'
 import { supabase } from '../lib/supabase'
 import { canManageAnnouncements, canReadAnnouncements, type Announcement } from '../lib/announcements'
-import { canAccessCommunication, canReadAssessments, canReadLearning, canReadSchedules, schoolRoleLabels } from '../lib/school'
+import { schoolRoleLabels } from '../lib/school'
+import { canAccessCommunication, canReadAssessments, canReadAttendance, canReadDashboardOverview, canReadGuardianPortal, canReadJournals, canReadLearning, canReadSchedules, canReadSchoolDocuments, canReadSupervision, canReadTeacherAttendance, canReadTeachingModules, isAdministrator, isPrincipal } from '../utils/permissions'
 import { getDashboardOverview, type DashboardOverview } from '../lib/dashboard-overview'
 
 type SchoolProfile = { full_name: string; role: string }
@@ -43,13 +43,8 @@ function SchoolDashboard({ userId }: { userId: string }) {
 
     const client = supabase
     if (!client) {
-      const demoProfile = getDemoProfile(userId)
-      const demoAnnouncements = getDemoAnnouncements()
       if (active) {
-        setProfile(demoProfile ? { full_name: demoProfile.full_name, role: demoProfile.role } : { full_name: 'Pengguna Demo', role: 'pending' })
-        setRecent(demoAnnouncements.filter((item) => item.status === 'published').slice(0, 3) as Announcement[])
-        setPublishedCount(demoAnnouncements.filter((item) => item.status === 'published').length)
-        setDraftCount(demoAnnouncements.filter((item) => item.status === 'draft').length)
+        setProfileError('Konfigurasi Supabase belum tersedia. Periksa pengaturan sekolah.')
         setLoading(false)
       }
       return () => { active = false }
@@ -62,7 +57,7 @@ function SchoolDashboard({ userId }: { userId: string }) {
         if (!active) return
         setProfile(data)
         if (!data) { setProfileError('Profil sekolah belum tersedia. Hubungi administrator sekolah.'); return }
-        if (data.role === 'administrator' || data.role === 'principal') {
+        if (canReadDashboardOverview(data.role)) {
           try {
             const snapshot = await getDashboardOverview(client)
             if (!active) return
@@ -103,7 +98,7 @@ function SchoolDashboard({ userId }: { userId: string }) {
   const canRead = canReadAnnouncements(profile?.role ?? null)
   const canManage = canManageAnnouncements(profile?.role ?? null)
   return <section className="board dashboard">
-    <div className="board-heading"><div><h1>{profile?.full_name ? `Halo, ${profile.full_name}` : 'Selamat datang'}</h1><p>Kabar sekolah, ringkasan kelas, dan layanan akun Anda.</p></div><button className="refresh-button" disabled={loading} onClick={() => setAttempt(value => value + 1)}>{loading ? 'Memuat…' : 'Muat ulang'}</button></div>
+    <div className="board-heading"><div><h1>{profile?.full_name ? `Halo, ${profile.full_name}` : 'Selamat datang'}</h1><p>Kabar sekolah, ringkasan kelas, dan layanan akun Anda.</p></div><button className="refresh-button" type="button" disabled={loading} onClick={() => setAttempt(value => value + 1)}>{loading ? 'Memuat…' : 'Muat ulang'}</button></div>
     {loading ? <p role="status">Menyiapkan dashboard…</p> : <>
       {profileError && <p className="error" role="alert">{profileError}</p>}
       {profile && <p className="role-strip"><span>Anda masuk sebagai</span><strong>{schoolRoleLabels[profile.role] ?? 'Belum tersedia'}</strong></p>}
@@ -119,7 +114,7 @@ function SchoolDashboard({ userId }: { userId: string }) {
             <article aria-label="Kelas aktif"><span>Kelas aktif</span><strong>{overview.active.classes}</strong><Link to="/sekolah/school_classes">Lihat kelas aktif</Link></article>
           </div>
         </section>}
-        {overview && profile?.role === 'principal' && <section className="principal-overview" aria-labelledby="principal-overview-title">
+        {overview && isPrincipal(profile?.role) && <section className="principal-overview" aria-labelledby="principal-overview-title">
           <h2 id="principal-overview-title">Ringkasan kepala sekolah</h2>
           <p>Jumlah sesi menurut tahap terakhir dan modul ajar yang perlu ditinjau. Draf pribadi guru tidak dihitung.</p>
           <div className="principal-metrics">
@@ -145,13 +140,15 @@ function SchoolDashboard({ userId }: { userId: string }) {
         {canReadLearning(profile?.role ?? null) && <QuickLink to="/materi" icon={BookOpen} title="Materi kelas" detail="Buka bahan pembelajaran yang tersedia."/>}
         {canReadLearning(profile?.role ?? null) && <QuickLink to="/tugas" icon={ClipboardList} title="Tugas kelas" detail="Kelola tugas, pengumpulan, dan umpan balik."/>}
         {canReadAssessments(profile?.role ?? null) && <QuickLink to="/asesmen" icon={ClipboardCheck} title="Asesmen dan nilai" detail="Lihat hasil terbit atau kelola asesmen sesuai peran."/>}
-        {profile?.role !== 'parent' && <QuickLink to="/absensi" icon={UserCheck} title="Absensi kelas" detail="Catatan kehadiran dan rekap yang dapat Anda akses."/>}
-        {profile?.role === 'parent' && <QuickLink to="/ruang-orang-tua" icon={UserRound} title="Kehadiran anak" detail="Pantau anak yang telah ditautkan oleh sekolah."/>}
+        {canReadAttendance(profile?.role ?? null) && <QuickLink to="/absensi" icon={UserCheck} title="Absensi kelas" detail="Catatan kehadiran dan rekap yang dapat Anda akses."/>}
+        {canReadTeacherAttendance(profile?.role ?? null) && <QuickLink to="/absensi-guru" icon={ClipboardCheck} title="Absensi guru" detail="Catat jam masuk/keluar dan ajukan koreksi."/>}
+        {canReadGuardianPortal(profile?.role ?? null) && <QuickLink to="/ruang-orang-tua" icon={UserRound} title="Kehadiran anak" detail="Pantau anak yang telah ditautkan oleh sekolah."/>}
         {canAccessCommunication(profile?.role ?? null) && <QuickLink to="/komunikasi" icon={MessageSquare} title="Komunikasi" detail="Pesan wali kelas dan keluarga sesuai tautan akun."/>}
-        {['administrator', 'principal', 'teacher'].includes(profile?.role ?? '') && <QuickLink to="/modul-ajar" icon={FileText} title="Modul ajar" detail="Dokumen perencanaan dan proses peninjauan."/>}
-        {['principal', 'teacher'].includes(profile?.role ?? '') && <QuickLink to="/supervisi" icon={Eye} title="Supervisi akademik" detail="Jadwal, observasi, tindak lanjut, dan laporan."/>}
-        {['teacher','administrator','principal'].includes(profile?.role??'') && <QuickLink to="/jurnal" icon={PenLine} title="Jurnal mengajar" detail="Catatan kegiatan pembelajaran sesuai penugasan."/>}
-        {profile?.role === 'administrator' && <>
+        {canReadTeachingModules(profile?.role ?? null) && <QuickLink to="/modul-ajar" icon={FileText} title="Modul ajar" detail="Dokumen perencanaan dan proses peninjauan."/>}
+        {canReadSchoolDocuments(profile?.role ?? null) && <QuickLink to="/dokumen" icon={FileText} title="Dokumen sekolah" detail="Unggah, periksa, dan arsipkan dokumen administrasi."/>}
+        {canReadSupervision(profile?.role ?? null) && <QuickLink to="/supervisi" icon={Eye} title="Supervisi akademik" detail="Jadwal, observasi, tindak lanjut, dan laporan."/>}
+        {canReadJournals(profile?.role ?? null) && <QuickLink to="/jurnal" icon={PenLine} title="Jurnal mengajar" detail="Catatan kegiatan pembelajaran sesuai penugasan."/>}
+        {isAdministrator(profile?.role) && <>
           <QuickLink to="/sekolah" icon={ShieldCheck} title="Siapkan data sekolah" detail="Tahun ajaran, kelas, guru, siswa, dan penugasan."/>
           <QuickLink to="/tautan-akun" icon={Link2} title="Tautan akun" detail="Verifikasi hubungan akun guru, siswa, dan wali."/>
         </>}

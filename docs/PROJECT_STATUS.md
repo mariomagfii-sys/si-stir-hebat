@@ -1,32 +1,55 @@
 # Status SI STIR HEBAT
 
-## Pembaruan Codex — 20 November 2026
+Diperbarui: 21 November 2026 (Asia/Jakarta). Workspace: `D:/code/SI_STIR_HEBAT_Starter/si-stir-hebat`.
 
-- Status tambahan sore hari: keputusan sementara pemilik D1/D2 sudah ditetapkan; tidak lagi menunggu pilihan terkait `todos` atau draf. Sesudah tambahan cakupan fan-out notifikasi, `node --test tests/database.test.mjs` lulus **73/73** dan `npm run check` tetap EXIT 0 pada **137/137**. Rerun browser penuh port 5397 masih aktif (trace bertambah; belum ada ringkasan akhir); hasil penuh terakhir yang selesai 312/312 port 5401 tetap bukti terakhir yang dapat diklaim.
-- Gerbang hosted tetap tertahan oleh WARN Security Advisor `auth_leaked_password_protection` dan belum tersedianya konfigurasi lokal untuk `npm run check:supabase`; belum ada write hosted. X9 Supabase lokal, X10 deploy, dan X11 merge juga belum selesai karena prasyarat runtime/branch/remote yang dijelaskan di bawah.
-- Branch workspace bersama saat diperiksa: `ai/qoder-palette-d8`; perubahan Qoder dibiarkan apa adanya. Tidak ada commit/merge.
-- **Tes kanonik terbaru:** `npm run check` pada Node v24.22.3 EXIT 0: 39 migration, CI check, lint, typecheck, **137/137 tes**, build 1.781 modul, dan audit bundel 26 JavaScript tanpa akun demo. Build memakai URL/publishable key sintetis proses-lokal; cache TS diarahkan sementara ke `%TEMP%` dan konfigurasi dipulihkan byte-identik. `dist/` dibangun ulang. Peringatan chunk PDF 790,69 kB.
-- **Migration:** lokal 39, hosted 23, 16 belum hosted. `node scripts/check-migrations.mjs` lulus, timestamp unik/naik. PGlite database + API terfokus 73/73 lulus.
-- Hosted tetap tanpa perubahan. Pemeriksaan read-only mencatat `public.todos` kosong (0 baris) dan satu peringatan Security Advisor `auth_leaked_password_protection`; migration hosted menunggu Advisor bersih. Jangan menganggap warning sebagai lulus.
-- Recheck Supabase MCP 20 November 2026 13:29 WIB: 23 versi hosted cocok dengan 23 migration lokal pertama; 16 migration lokal belum hosted; `todos_count=0`; Security Advisor tetap WARN `auth_leaked_password_protection`. Pemeriksaan ini read-only; `check:supabase`, metadata RLS/Storage, dan backup/restore belum diverifikasi.
-- Laporan wali mengubah absensi hanya setelah konfirmasi eksplisit guru: status `absent` disimpan melalui helper audit/revisi bila tepat satu roster sesi cocok; bila tidak ada/ambigu, RPC `55000` dan laporan tetap pending. Retensi diuji dengan Auth sintetis tetapi belum mencakup semua FK audit historis/Supabase lokal.
-- X9 Supabase-local retensi tertunda: Docker/Podman/nerdctl tidak tersedia dan WSL belum terpasang. Supabase CLI lokal terdeteksi, tetapi `--version` mencoba menulis telemetry di luar root dan ditolak sandbox; stack lokal tidak dijalankan.
-- X8 RPC `dashboard_overview()` sudah diintegrasikan ke Dashboard; opsi referensi memakai limit+1 dan memberi sinyal saat melebihi cap 1000/200. Dua partial index status modul diuji dengan PGlite EXPLAIN ANALYZE atas 50.000 modul sintetis (bukan benchmark hosted). X10 (deploy), X11 (review/merge) belum dikerjakan. UAT akun nyata dan konfigurasi Auth hosted tetap tugas pemilik.
-- X10 preflight: `vercel.json` memakai build ke `dist/`, tetapi Vercel CLI tidak terpasang/terlihat dan tidak ada variabel lingkungan Vercel/Supabase frontend pada proses. Tidak ada deploy. Checklist pemilik tersedia di `docs/CHECKLIST_PEMILIK.md`.
-- Suite browser penuh terkini **312/312 lulus** pada Node v24.22.3; log `%TEMP%\qoder-qa-2026-11-18\browser-full-5401.log` (8,8 menit, EXIT 0). Run 311/312 di port 5397 gagal pada satu tes impor XLSX karena Vite memuat chunk parser dan memuat ulang halaman saat unggahan; tes kini mengulang pemilihan berkas sampai pratinjau tampil, lalu run port 5401 bersih. Run port 5389 tidak valid karena server Vite kehabisan heap (OOM) di tes ke-43; run ulang memakai heap 4 GB. Satu kegagalan cold-start rute lazy di run sebelumnya (port 5381) diperbaiki dengan batas assertion 15 detik. Suite memakai API tiruan; belum UAT. X11 tertahan: branch lokal kandidat `ai/qoder-demo-gate`/`ai/qoder-copilot-fixes` belum diuji terpisah terhadap basis terkini; `main` dan remote tidak tersedia, dan branch aktif/worktree masih bercampur.
+## Ringkasan
 
-Pembaruan terakhir: 20 November 2026. Workspace: `D:/code/SI_STIR_HEBAT_Starter/si-stir-hebat`.
+- **Check lokal:** `npm run check` Node v24.22.3 EXIT 0 pada 21 November: migration/CI check, lint, typecheck, **140/140** tes unit/database, build terisolasi 1.789 modul, audit **30 bundel JavaScript tanpa akun demo**. Log [check-2026-11-21-node24.log](logs/check-2026-11-21-node24.log); peringatan chunk PDF 790,69 kB. Build release `npm run build` juga EXIT 0 pada 21 November: 1.789 modul, 30 bundel JS diaudit tanpa akun demo, output `dist/` berhasil diganti.
+- **Check fase konfigurasi sekolah:** `npm run check` EXIT 0 pada 21 November 2026, **149/149** tes unit/database, 39 migration, build terisolasi 1.789 modul, 30 bundel JavaScript tanpa akun demo. Termasuk 9 test PGlite baru untuk konfigurasi sekolah. Peringatan chunk PDF 790,69 kB tetap ada.
+- **Browser:** suite penuh terbaru **420/420 lulus**, port 5191, 7,1 menit, EXIT 0, satu worker, desktop + mobile; memakai Vite eksternal yang direuse untuk mencegah proses child tertinggal saat cleanup. Ringkasan di [browser-full-2026-11-21-port5191-reuse.log](logs/browser-full-2026-11-21-port5191-reuse.log). API tiruan, bukan UAT akun sekolah. Suite 402/402 port 5472 adalah bukti historis untuk tree sebelumnya.
+- **Validasi terdahulu:** run Qoder sebelumnya 137/137 unit/database dan 312/312 browser (port 5401). Angka itu historis, bukan bukti untuk tree sekarang.
+- **Migration:** 39 berkas lokal menurut `node scripts/check-migrations.mjs`, 23 tercatat hosted berdasarkan pemeriksaan read-only terakhir, 16 belum hosted. Migration baru `20261121090000_school_configuration.sql` belum hosted. Tidak ada migration hosted diterapkan.
+- **Hosted:** pemeriksaan read-only 21 November 2026 08:52 WIB mengonfirmasi 23 migration sampai `20261113074045`; Security Advisor WARN `auth_leaked_password_protection`. Inventaris metadata skema tersimpan di [HOSTED_SCHEMA_SNAPSHOT_2026-11-20.md](HOSTED_SCHEMA_SNAPSHOT_2026-11-20.md); bukan backup/restore. Tidak ada migration hosted diterapkan.
+- **check:supabase:** gagal sebelum HTTP Auth check karena DNS `ENOTFOUND`. Validasi lokal memastikan format konfigurasi benar dan hostname cocok dengan project tersambung; nilai konfigurasi tidak dibaca/dicatat. Periksa resolver/jaringan lokal sebelum mengulang.
+- **Belum terverifikasi:** clean install `npm ci` (EPERM pada binary Windows terkunci; dependency pulih lewat install non-clean), build release yang menimpa `dist/`, Supabase lokal, backup/restore, deploy, dan UAT akun sekolah.
 
-Status ringkas (verifikasi lokal 20 November 2026):
+## Riwayat pembaruan
 
-- **Tes:** `npm run check` EXIT 0 pada Node v24.22.3 dengan 137/137 tes, 39 migration, CI check, lint, typecheck, build 1.781 modul, dan audit 26 JS tanpa akun demo. Build memakai konfigurasi sintetis proses-lokal; peringatan chunk PDF 790,69 kB.
-- **Browser:** suite penuh **312/312 lulus** pada desktop dan ponsel. Bukti dan batas tes ada di `docs/QA_COVERAGE.md` dan log `%TEMP%\qoder-qa-2026-11-18\browser-full-5401.log` (8,8 menit, EXIT 0). Tes memakai API tiruan, bukan UAT akun sekolah.
-- **Migration:** 39 berkas lokal; 23 tercatat hosted, 16 belum hosted. Riwayat hosted harus tetap berurutan. Security Advisor memiliki satu WARN `auth_leaked_password_protection`, sehingga belum ada migration hosted diterapkan.
-- **Keputusan:** D1–D8 tanggal 20 November 2026 tercatat berstatus sementara di `docs/DECISIONS.md`. Matriks V/C/U/D/A/E ada di `docs/RBAC_RESMI_DRAFT.md` dan masih menunggu pengesahan pemilik.
-- **Belum terverifikasi:** UAT akun sekolah, email/pemulihan nyata, CI hosted, restore backup, dan kesiapan operasional. Jangan menyatakan “aman” atau “siap operasional” tanpa bukti baru.
+## Migration konfigurasi sekolah - 21 November 2026
+
+- Ditambahkan migration lokal `20261121090000_school_configuration.sql` dan 9 test PGlite pada `tests/school-configuration.test.mjs`. Mencakup pengaturan KKM, retensi, katalog absensi guru, jenis dokumen, kalender sekolah, dan permintaan penghapusan dengan RLS/grant minimal.
+- Retensi bukti supervisi diperbarui sesuai revisi pemilik 21 November 2026 menjadi 1 tahun ajaran. `execute_deletion_request` hanya mencatat bahwa operator melakukan tindakan; tidak ada penghapusan otomatis.
+- `npm run check` Node v24.22.3 EXIT 0: 39 migration, lint, typecheck, **149/149** tes, build terisolasi 1.789 modul, 30 bundle JS tanpa akun demo. Peringatan PDF 790,69 kB.
+- Belum hosted: 16 migration lokal berikut belum tercatat hosted. Advisor WARN dan seluruh gerbang hosted tetap berlaku; tidak ada write remote.
+
+## Pembaruan build release — 21 November 2026
+
+- `npm run build` dijalankan dengan Node v24.22.3 dan konfigurasi Supabase sintetis sementara pada proses build; guard `prebuild` lulus, Vite membangun 1.789 modul, lalu `scripts/check-demo-bundle.mjs dist` memeriksa 30 berkas JavaScript dan tidak menemukan akun demo. Exit 0; output release `dist/` berhasil ditimpa. Peringatan chunk PDF 790,69 kB tetap ada.
+- Tidak ada credential yang dicatat. Ini verifikasi build lokal, bukan deploy atau UAT.
+
+## Pembaruan Codex — 21 November 2026
+
+- `npm run check` Node v24.22.3 EXIT 0 setelah pembaruan docs: 38 migration, CI workflow, lint, typecheck, 140/140 unit/database, isolated build 1.789 modul, 30 JavaScript tanpa akun demo. Peringatan chunk PDF 790,69 kB.
+- `npm run check:supabase` (21 Nov) validasi config lokal lulus tetapi DNS gagal `ENOTFOUND` sebelum request; project URL/key tidak dicetak. Tidak dianggap hasil verifikasi tabel hosted.
+- Browser run bersih pada tree ini: 420/420 EXIT 0; catatan run cleanup yang tidak bersih sudah superseded.
+- Kontrak API dan keputusan role absensi guru/dokumen diperjelas. Hosted masih 23/38 migration dan Advisor WARN; Supabase lokal, `check:supabase`, backup/restore teruji, UAT, merge, dan deploy belum terpenuhi.
+- Merge belum dapat ditinjau: Git lokal di `ai/codex-foundation` tidak memiliki remote; 163 path bercampur staged/unstaged/untracked dari pekerjaan lintas agen. GitHub read-only mengonfirmasi remote repo dengan default `main`, tetapi branch `ai/codex-foundation` dan PR belum ada. Perubahan dipertahankan tanpa commit.
+
+## Pembaruan 20 November 2026
+
+- **Tes kanonik pada snapshot sebelum konsolidasi:** `npm run check` EXIT 0: 137/137 tes, 39 migration, build 1.781 modul dan audit 26 JS. Angka itu historis; hasil terkini 140/140 tes dan 38 migration ada pada Ringkasan.
+- **Browser:** suite penuh **312/312 lulus** di desktop dan ponsel (port 5401, 8,8 menit, EXIT 0; log `%TEMP%\qoder-qa-2026-11-18\browser-full-5401.log`). Run 311/312 sebelumnya gagal pada satu tes impor XLSX; tes kini menunggu pratinjau tampil. Run lain tidak valid karena OOM Vite (port 5389) dan diulang dengan heap 4 GB. Semua tes memakai API tiruan, bukan UAT.
+- **Migration/hosted:** 23 versi hosted cocok dengan 23 migration lokal pertama; 15 migration lokal belum hosted sesudah konsolidasi. `public.todos` telah dihapus di migration lokal `security_foundation`; pemeriksaan read-only 13:29 WIB mencatat `todos_count=0`. Security Advisor tetap WARN `auth_leaked_password_protection`, sehingga **tidak ada migration hosted diterapkan**.
+- **Backend:** X8 `dashboard_overview()` dan sinyal pemotongan daftar (limit+1) terintegrasi; dua partial index diuji PGlite EXPLAIN ANALYZE atas 50.000 modul sintetis, bukan benchmark hosted. X9 Supabase lokal tertahan (Docker/WSL tidak tersedia). X10 preflight Vercel tanpa CLI/variabel lingkungan, tidak ada deploy. X11 review/merge tertahan karena branch dan worktree bercampur.
+- **UI Qoder:** helper izin per domain, `AuthProvider` di `src/components/auth/`, halaman `ConfigMissing` tanpa cabang demo, token desain + komponen bersama (PageHeader/StatusBadge/DataTable/ConfirmDialog/PendingState), dan rute lazy dengan fallback sudah terpasang. Verifikasi memakai tes terfokus; adopsi komponen ke halaman lama belum menyeluruh.
+- **Q8/Q9 (kualitas & aksesibilitas):** semua halaman modul hari ini memakai API asli tanpa data tiruan di `src/`; penolakan lintas peran diuji per halaman (termasuk siswa dan akun menunggu tanpa pembacaan tabel pada dokumen dan absensi guru). Perbaikan Q9 terpasang: paginasi `aria-live="polite"` (7 tempat), tombol muat ulang dasbor `type="button"`, dan `ConfirmDialog` dengan jebakan Tab/pemulihan fokus yang kini dipakai alur arsip dokumen (fokus tombol konfirmasi, Escape membatalkan tanpa PATCH). Bukti terfokus ada di `docs/Q9_A11Y_FIX_LIST_2026-11-20.md`; verifikasi ulang Q9 dan suite penuh tetap menunggu S3 Codex, sedangkan handoff API asli (S2) belum tercatat di papan.
+- **Dokumen (Q6):** `docs/RBAC_MATRIX.md` disusun ulang dari policy 38 migration lokal dengan kode V/C/U/D/A/E; PROJECT_STATUS diurutkan kronologis dengan satu header tanggal; README, AGENTS, dan QA_COVERAGE diselaraskan dengan angka kanonik; konflik stack PRD (Next.js/Tailwind/Zod/monorepo) dicatat di `docs/DECISIONS.md`.
+- **Modul hari ini:** laporan ketidakhadiran wali, pusat notifikasi, rekap mingguan 7 Kebiasaan, administrasi dokumen (versi/review), absensi guru dengan persetujuan koreksi, dan dashboard per peran. Rincian ada pada entri di bawah.
+- **Sisa risiko:** S-02 bukti supervisi masih terbaca semua akun login; K3 draf asesmen belum diputuskan; UAT akun sekolah, email nyata, CI hosted, restore backup, dan kesiapan operasional belum diverifikasi.
+
 ## Laporan ketidakhadiran wali — 20 November 2026
 
-- Rute `/laporan-ketidakhadiran` (`src/features/parents/AbsenceReports.tsx`) memakai API `src/features/parents/api/absence-reports` tanpa mengubah API atau migration. Wali memilih anak tertaut, tanggal (tidak boleh mendatang), dan alasan; guru kelas melihat laporan kelas penugasan dan memutuskan `confirmed`/`needs_revision` lewat RPC dengan catatan wajib; admin/kepala sekolah baca-saja.
+- Rute `/laporan-ketidakhadiran` (`src/features/parents/AbsenceReports.tsx`) memakai API `src/features/parents/api/absence-reports` tanpa mengubah API atau migration. Wali memilih anak tertaut, tanggal (tidak boleh mendatang), dan alasan; guru kelas melihat laporan kelas penugasan dan memutuskan `confirmed`/`rejected` lewat RPC dengan catatan wajib; admin/kepala sekolah baca-saja.
 - Pengiriman menyimpan ID permintaan; bila respons hilang, tombol "Kirim ulang laporan" mengirim ID yang sama. Kode `23505` ditampilkan sebagai laporan yang sudah ada untuk anak dan tanggal itu. Konflik revisi `40001` meminta muat ulang daftar dan mempertahankan catatan.
 - Daftar 25 baris per halaman dengan sentinel; nama murid diambil dari RPC `habit_students` (baca-saja). Bila RPC tidak tersedia, nama diganti label "Murid terhubung" tanpa mengarang identitas.
 - Verifikasi: typecheck dan lint fokus lulus; `tests/browser/absence-reports.spec.ts` 4/4 lulus (desktop + ponsel); angka kanonik mengikuti ringkasan di atas. Belum dijalankan akun sekolah nyata; migration `20261118000200_guardian_absence_reports` belum hosted.
@@ -86,6 +109,71 @@ Perbaikan keamanan dan UX pada mode demo: pencarian profil untuk reset kata sand
 
 Peta rute baru menambahkan halaman `/komunikasi` untuk guru dan orang tua. Guru dapat memilih wali/murid yang masih aktif dan mengirim pesan teks; wali dapat membaca pesan yang masuk untuk murid terverifikasi. Konten mengikuti kontrak API lokal: pesan append-only, tunggal dan dibatasi 1-4.000 karakter, serta hanya menampilkan relasi yang masih aktif. Validasi: `npm run check` lulus (lint, TypeScript, 109 tes, build). UI belum menggantikan UAT akun sekolah nyata atau penerapan hosted.
 
+## Audit kesesuaian workspace — 14 November 2026
+
+Pemeriksaan langsung pada root aplikasi: npm run check lulus (lint, TypeScript, 101 tes, build). Build memberi peringatan chunk mesin PDF 790,69 KB dan font 855,16 KB. Browser dan UAT akun sekolah tidak diulang pada audit ini.
+
+Fitur yang terkonfirmasi dalam kode mencakup asesmen, laporan akademik dan usulan jadwal. Pernyataan historis bahwa usulan jadwal masih pekerjaan berikutnya sudah tertinggal. Folder docs/references serta berkas PRD/RBAC tidak ditemukan dalam workspace starter, sehingga kesesuaian penuh terhadap dokumen asli belum dapat diverifikasi.
+
+Git yang ditemukan masih repository induk D:/code, tanpa commit, dengan proyek my-app dan berkas induk lain ikut tercakup. Root aplikasi tetap D:/code/SI_STIR_HEBAT_Starter/si-stir-hebat sesuai AGENTS.md. Penataan repository perlu diselesaikan sebelum publikasi. Tabel contoh todos tercatat terpisah dan tidak memiliki alur UI sekolah.
+
+Tanggal sekolah masih memakai Asia/Jakarta pada frontend dan migration. Konfirmasi zona waktu operasional sekolah diperlukan sebelum mengubah aturan tanggal/tenggat bersama-sama. Skema asesmen tetap sementara sesuai keputusan pengguna. Modul dokumen, kehadiran guru, fitur perkembangan siswa dan UAT masih perlu dituntaskan berdasarkan acuan resmi.
+14 November 2026: Repo https://github.com/mariomagfii-sys/si-stir-hebat berhasil di-clone ke D:/code/SI_STIR_HEBAT_Starter/github-release. Paket rilis 108 berkas diunggah ke main, commit 86fe0e79224d4d607afdd30cfeb633a24b8a5fa9; git ls-remote cocok dengan HEAD lokal. Tidak menyertakan .env.local, .env, .vercel atau lampiran pribadi. CI GitHub belum diverifikasi (konektor memberi 404; Git CLI berhasil). Deployment Vercel dan aktivasi admin tetap belum selesai.
+14 November 2026: Login Vercel berhasil melalui device authorization; proyek si-stir-hebat dibuat dan deployment CLI produksi READY (dpl_DHXi8ktz5chWQQji1wTJQdrLMjEk). URL publik https://si-stir-hebat-blue.vercel.app. Empat route HTTP 200; browser headless mobile memverifikasi login nyata (bukan demo), redirect /jadwal tanpa sesi, tidak meluber dan tidak ada pageerror. Hanya akses anonim, tidak membaca data pribadi. Node24 diselaraskan package/lock (push b07638d). Panduan produksi/aktivasi diunggah commit36f8c53. GitHub auto-deploy belum terhubung karena Vercel meminta GitHub Login Connection. Site URL/redirect Auth, aktivasi admin, login/email nyata dan UAT tetap belum terverifikasi. Tujuan PRD penuh belum selesai.
+
+## Ringkasan sekolah dashboard — 14 November 2026
+
+PRD 5.1 ditindaklanjuti: admin/kepala sekolah melihat jumlah siswa, guru dan kelas berstatus aktif. Query HEAD dengan exact count, bukan mengunduh baris atau menghitung halaman; RLS tabel tetap berlaku. Label menjelaskan kelas mencakup seluruh tahun ajaran dan siswa berasal dari registri, bukan enrollment. Nol, belum dimuat dan gagal dibedakan. Partial failure mempertahankan jumlah yang berhasil; retry tersedia. Tidak ada query ringkasan pada guru/siswa/wali/pending. Tautan menuju data master terkait tersedia.
+
+npm run check Node24 lulus 101 tes, lint, tipe dan build. Sepuluh tes browser khusus ringkasan desktop/ponsel lulus, meliputi jumlah1205, nol, missing count, retry dan pembatasan permintaan peran. Tidak ada perubahan database atau pembacaan data pribadi. Commit eb1d4f8 sudah dipush; deployment produksi baru sedang diverifikasi. Dashboard PRD masih perlu progres supervisi, administrasi, aktivitas/notifikasi dan ringkasan spesifik guru/keluarga; jangan menganggap bagian5.1 selesai penuh.
+Deployment ringkasan dashboard dpl_BWAUuwkXSpGnB84RPsjVr4nPdehm terverifikasi READY dan alias produksi aktif. Smoke browser anonim produksi lulus ulang setelah deployment.
+
+## Pembaruan antarmuka dan regresi browser — 14 November 2026
+
+Beranda tidak lagi menyatakan bahwa aplikasi belum menggunakan data sekolah sebenarnya. Pesan sekarang menjelaskan bahwa layanan mengikuti peran akun dan pengguna perlu masuk dengan akun sekolah yang perannya sudah ditetapkan. Render halaman beranda dan route login terverifikasi di browser lokal. `npm run check` lulus: lint, TypeScript, 101 tes, dan build produksi.
+
+Run browser penuh menjalankan 174 skenario desktop/ponsel: 172 lulus dan dua gagal pada selector tes jaringan pengumuman yang ambigu karena dashboard kini juga menampilkan error ringkasan. Selector diperbaiki agar menargetkan pesan pengumuman; tes terfokus lulus pada desktop dan ponsel (2/2). Suite browser penuh belum dijalankan ulang setelah perbaikan selector. Peringatan ukuran chunk PDF tetap dipertahankan: mesin 790,69 KB dan font 855,16 KB; pemuatan PDF tetap dinamis.
+
+UAT akun sekolah, URL Auth hosted, dan aktivasi admin masih memerlukan verifikasi pada proyek/akun pemilik. Tidak ada perubahan database, konfigurasi hosted, atau data sekolah nyata dalam pembaruan ini.
+
+## Context loop proyek — 14 November 2026
+
+`PROJECT_CONTEXT.md` dan `PROGRESS.md` dibuat di root aplikasi untuk meneruskan konteks lintas sesi. Isinya mengikuti React/Vite, fitur yang benar-benar tersedia, dan palet Neo-Tactile Edu proyek; bukan contoh stack/tema generik. Prioritas modul baru kini diblokir sampai dokumen PRD/RBAC/database/UI-UX tersedia kembali: `docs/references/` tidak ada, dan indeks arsip starter lokal yang diperiksa juga tidak memuat dokumen acuan tersebut. UAT nyata tetap memerlukan pemilik akun sekolah.
+
+## Ringkasan kebutuhan dan arah desain — 14 November 2026
+
+Pengguna memberikan target peran: supervisi/pengendalian administrasi untuk kepala sekolah; perangkat, absensi, asesmen, dan hasil supervisi untuk guru; 7 Kebiasaan, kelas 1–6, PJOK/PAI untuk murid; pemberitahuan ketidakhadiran ke sekolah/guru untuk wali. Arahan desain terbaru adalah mobile-first, ungu tua/lilac/biru muda/pink, font profesional-playful. `PROJECT_CONTEXT.md` dan `AGENTS.md` diselaraskan untuk fitur baru/polish yang diminta; halaman selesai tidak dirombak.
+
+Ringkasan ini belum menetapkan proses persetujuan, siklus pencatatan kebiasaan, visibilitas data anak, atau kanal dan alur pemberitahuan absen. Tidak ada migration atau implementasi fitur baru dibuat sampai detail tersebut atau acuan lengkap tersedia.
+
+## Dashboard kepala sekolah — 14 November 2026
+
+Dashboard menampilkan hitungan baca-saja supervisi berdasarkan tahap terakhir dan modul ajar berstatus diajukan/perlu revisi. Query memakai exact count HEAD terhadap tabel yang sudah ada, mengikuti RLS kepala sekolah, dan hanya berjalan untuk peran `principal`; draf pribadi guru tidak dihitung. Jika hitungan tidak tersedia, UI membedakannya dari nol, menjelaskan kegagalan, dan menyediakan retry. Ringkasan tidak mengambil nama, catatan supervisi, atau isi modul. Gaya kartu mengikuti palet ungu/lilac/biru/pink tanpa merombak halaman yang selesai.
+
+Validasi: `npm run check` lulus (lint, TypeScript, 101 tes unit/database, build); enam tes browser terfokus desktop/ponsel lulus untuk jumlah tahap/status, pembatasan peran, nol versus kegagalan, retry, dan overflow horizontal. Tidak ada migration atau perubahan hosted. Tahap backlog berikutnya, 7 Kebiasaan, masih menunggu keputusan pencatatan, frekuensi, validasi, dan visibilitas data.
+
+## Optimasi font PDF - 14 November 2026
+
+Build hanya menyertakan font Roboto normal dan tebal yang digunakan rekap akademik, tetap dimuat dinamis saat ekspor. Chunk font berkurang dari 855,16 KB menjadi 419,57 KB (gzip 465,45 ke 225,08 KB); mesin PDF 790,69 KB masih memicu peringatan. Jika laporan memakai italic, varian font perlu ditambahkan kembali. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan PDF desktop dan ponsel lulus dengan API tiruan. UAT akun sekolah belum dilakukan.
+
+## Daftar pekerjaan prioritas sementara - 14 November 2026
+
+Ini daftar dari kode dan catatan proyek, bukan hasil pencocokan lengkap PRD: `docs/references/` dan dokumen PRD/RBAC asli tidak tersedia. Prioritas dan kewenangan harus ditinjau kembali setelah acuan tersedia.
+
+| Prioritas | Celah atau verifikasi | Bukti dan batas |
+| --- | --- | --- |
+| 1 | UAT per peran, Auth/redirect, email dan aktivasi admin | Panduan ada; akun sekolah dan pengaturan hosted belum diverifikasi. Aktivasi oleh pemilik. |
+| 2 | Komunikasi guru-wali dan administrasi dokumen | Tidak ada rute atau modul khusus pada `src/app/App.tsx`; kontrak pesan, penerima, akses dan persetujuan belum dikonfirmasi. |
+| 3 | Kebiasaan siswa | Ada folder fitur dan migration lokal, tetapi tidak ada rute UI; penerapan hosted belum terverifikasi pada sesi ini. |
+| 4 | Dashboard dan alur perkembangan/administrasi lain | Catatan proyek menyebut ringkasan khusus peran dan progres belum lengkap; diperlukan PRD untuk mengukur cakupan. |
+| 5 | Aturan nilai resmi dan zona waktu sekolah | Keputusan sementara dan tanggal Asia/Jakarta masih perlu dikonfirmasi; tidak menyimpulkan aturan rapor. |
+
+Telaah penuh C3 terblokir oleh ketiadaan dokumen acuan; daftar ini tidak menetapkan persyaratan resmi.
+
+## Fondasi komunikasi lokal - 14 November 2026
+
+Migration `20261114083827_komunikasi` dan API bertipe membatasi pesan teks append-only ke guru dan wali dengan penugasan, keanggotaan, dan relasi aktif. Pencabutan akses diuji di PGlite; `npm run check` Node 24 lulus 108 tes, lint, tipe dan build. Migration belum diterapkan ke hosted; `student_habits` yang lebih awal juga belum tercatat di riwayat hosted. UI, verifikasi hosted, UAT serta aturan resmi retensi dan pengawasan masih terbuka.
+
 ## Persiapan rilis operasional — 13 November 2026
 
 Permintaan pengguna: kerjakan hingga web dapat digunakan, buat repo GitHub baru lalu deploy ke Vercel. Pengguna kemudian memilih membuat repo privat sendiri dan mengirim URL. Konektor GitHub belum menampilkan repository; Computer Use ke Chrome ditolak oleh alat. Belum ada push atau deployment publik. Akun admin belum tersedia; pengguna meminta panduan aktivasi, bukan pembuatan akun pribadi.
@@ -116,6 +204,28 @@ Penerapan keputusan dan perubahan jadwal dilakukan dalam satu transaksi melalui 
 
 Migration `20261113061010_schedule_proposals` diterapkan; total 22 migration. Metadata RLS, larangan INSERT/UPDATE langsung, serta larangan RPC anonim terverifikasi; Security Advisor kosong. Pemeriksaan tidak membaca data pribadi. `npm run check` Node 24 lulus dengan 101 tes, lint, tipe dan build. Tes database mencakup batas peran, duplikasi, konflik dengan rollback, revisi usang, pencabutan penugasan dan keputusan tunggal. Delapan tes browser jadwal desktop/ponsel lulus dengan API tiruan, ditambah dua regresi supervisi. Kegagalan awal pemilih label tes diperbaiki menggunakan combobox berdasarkan accessible name; tidak memerlukan perubahan UI. Peringatan ukuran chunk PDF tetap ada. UAT akun sekolah dan uji konkurensi multikoneksi belum dilakukan.
 
+## Jadwal pelajaran — 13 November 2026
+
+Fondasi `/jadwal` tersedia: admin membuat/mengubah/menonaktifkan jadwal mingguan dengan rentang tanggal dalam tahun ajaran, penugasan tetap, alasan wajib, audit database, dan revisi optimistis. Server menolak bentrok guru atau kelas, memeriksa kejadian hari dalam irisan periode, serta mengunci transaksi penulisan jadwal. Guru membaca sesuai penugasan aktif; siswa dan wali sesuai kelas dan hubungan terverifikasi. Kepala sekolah membaca; pending dan anonim ditolak. Daftar dipaginasi 25 item; admin/kepala sekolah dapat melihat jadwal nonaktif melalui mode pengelolaan.
+
+Migration `20261113000504_lesson_schedules` diterapkan dan riwayat dicocokkan. Pemeriksaan metadata memastikan RLS aktif pada dua tabel dan INSERT langsung klien ditolak. Tidak membaca data pribadi. Node 24 `npm run check` lulus: 100 tes, lint, tipe, build. Empat tes browser khusus jadwal desktop/ponsel lulus dengan API tiruan (ditambah dua regresi supervisi yang ikut filter). Belum UAT sekolah; uji konkurensi beberapa koneksi belum dilakukan. Peringatan ukuran chunk PDF lama tetap ada.
+
+Pekerjaan berikutnya: usulan perubahan jadwal oleh guru sesuai PRD, tampilan riwayat pengaturan, dan UAT. Skema nilai tetap sementara; tidak menghitung rapor otomatis.
+
+
+
+
+
+Hasil final rilis 13 November: pengulangan mobile lulus 82/82. Total cakupan akhir browser 164 skenario lulus (82 desktop + 82 mobile pada run terpisah setelah server tes awal berhenti). URL repo GitHub masih menunggu pengguna.
+
+## Batas proyek dan tabel contoh Supabase — 13 November 2026
+
+Folder `SI_STIR_HEBAT_Starter/si-stir-hebat` adalah satu-satunya root aplikasi utama untuk Codex: React/Vite, bukan Next.js. Demo Next.js terpisah `D:\code\my-app` bukan bagian dari aplikasi dan tidak boleh menjadi lokasi kerja lanjutan.
+
+Migration remote `20261113074045_create_private_todos` dibuat atas permintaan pengguna untuk contoh data privat. File migration disimpan di `supabase/migrations`, RLS membatasi setiap baris kepada pemiliknya, dan `scripts/check-supabase.mjs` memeriksa penolakan akses anonim. Tabel ini kosong dan tidak digunakan oleh UI SI STIR HEBAT. Tidak ada migration yang diterapkan ulang.
+
+## Persiapan rilis operasional — 13 November 2026
+
 ## Rekap dan perkembangan akademik — 12 November 2026
 
 Ekspor PDF kini tersedia dari hasil lengkap filter yang sama dengan CSV/Excel. PDF A4 lanskap memuat periode, filter, waktu pemuatan, status, kode/nama siswa, nilai, maksimum, persentase dan penanda skema sementara. Kepala tabel berulang, nomor halaman dan baris utuh mencegah pemotongan informasi saat laporan panjang. Generator/font dibundel lokal dan dimuat ketika ekspor dipakai. Tidak ada perubahan database atau pengiriman baris rekap ke layanan pembuat PDF.
@@ -129,6 +239,42 @@ Pengguna menegaskan skema ini sementara sampai skema resmi diberikan; dicatat di
 Migration `20261112051122_assessment_subject_identity` diterapkan. Backfill mengambil subject_id dari penugasan; metadata terverifikasi: kolom wajib, klien tidak dapat mengubahnya, RLS aktif, seluruh trigger aktif dan Security Advisor kosong. Tidak membaca baris data pribadi. `npm run check` pada Node 24.22.3 lulus (97 tes, lint, TypeScript, build). Setelah penambahan pengujian cakupan query rekap, 60 tes database lulus ulang; lint final lulus. Dua belas tes browser rekap desktop/ponsel lulus, termasuk pembacaan isi CSV/Excel hasil unduhan, data terpotong, batas jumlah, izin ditolak, akses wali dan URL langsung akun pending. Tes browser memakai API tiruan; UAT sekolah masih terbuka.
 
 Pekerjaan terbuka akademik: aturan resmi penilaian, kewenangan khusus wali kelas, pengelolaan perubahan peserta dan UAT. PDF modul lain dan kebutuhan PRD lainnya juga belum seluruhnya selesai.
+
+## Pemeriksaan workspace — 12 November 2026
+
+Antarmuka TaskSubmissions sudah tersedia dan terhubung dari halaman tugas. Siswa dapat mengirim jawaban teks, sedangkan guru dapat membaca jawaban dengan pagination. Penerapan migration task_submissions di remote dan pengujian browser alur pengumpulan belum diverifikasi pada pemeriksaan ini.
+
+npm run check berhasil: lint, TypeScript, 87 tes lokal dan build produksi lulus. Hasil ini tidak membuktikan seluruh kebutuhan PRD telah selesai. Pekerjaan terbuka tetap meliputi verifikasi pengumpulan, umpan balik dan penilaian, jadwal, administrasi dokumen, kehadiran guru, serta UAT akun sekolah.
+
+Migration 20261111232717_task_submissions menambah pengumpulan satu jawaban teks per siswa sebelum akhir hari tenggat (WIB). Siswa dapat membaca jawaban sendiri dan guru penulis tugas dengan penugasan aktif dapat membaca jawaban siswa. Jawaban terkirim tidak dapat diubah. RLS aktif, akses anonim ditolak menurut metadata, dan Security Advisor tidak melaporkan temuan. Build dan 87 tes lokal lulus. Uji browser khusus dan uji akun sekolah belum dijalankan.
+
+## Asesmen akademik — 12 November 2026
+
+Rute `/asesmen` tersedia bagi guru, kepala sekolah, admin, siswa dan wali sesuai RLS. Guru membuat asesmen formatif, sumatif, proyek, praktik/keterampilan atau sikap/karakter untuk penugasannya, dengan tanggal dalam tahun ajaran dan nilai maksimum positif per asesmen (maksimal dua desimal). Pengguna secara eksplisit menyetujui fondasi ini serta publikasi manual oleh guru tanpa perhitungan rapor otomatis.
+
+Daftar peserta disalin dari keanggotaan kelas aktif saat pembuatan. Nilai awal kosong, berbeda dari nol. Guru dapat mengedit metadata draf dan mengisi nilai/catatan. Publikasi wajib menunggu seluruh peserta dinilai dan tanggal asesmen tidak di masa depan. Metadata terbit dikunci; koreksi nilai terbit memerlukan alasan pada setiap permintaan dan dicatat bersama nilai lama/baru, catatan, aktor, waktu serta revisi. Guru/admin/kepala sekolah dapat membaca riwayat; siswa/wali hanya hasil terbaru yang terbit sesuai identitas/tautan anak aktif. Admin/kepala sekolah tidak dapat menulis nilai atau menerbitkan hasil.
+
+Migration `20261111234856_academic_assessments` diterapkan; tiga tabel memakai RLS, SELECT anonim ditolak dan Security Advisor kosong. `npm run check` lulus dengan 93 tes; setelah memperkuat alasan koreksi, 60 tes database dijalankan ulang dan lulus. Sepuluh tes browser terfokus diverifikasi di desktop/ponsel: delapan lulus awal dan dua alur guru lulus setelah memperbaiki selector combobox dalam tes. Pemeriksaan API dengan `limit=0` lulus untuk semua tabel yang tercantum, tanpa membaca baris data.
+
+Rekap/filter/ekspor CSV/Excel/PDF serta grafik perkembangan telah ditambahkan pada tahap berikutnya. Kewenangan khusus wali kelas, pengelolaan perubahan daftar peserta dan UAT akun sekolah masih terbuka. Tes lokal memakai PostgreSQL terisolasi dan tes browser memakai layanan tiruan; belum membuktikan UAT produksi atau uji beban serentak. Perhitungan rapor otomatis tidak termasuk fondasi sementara yang disetujui.
+
+## Umpan balik tugas — 12 November 2026
+
+Guru penulis tugas dengan penugasan aktif dapat menyimpan dan mengedit draf umpan balik per jawaban, kemudian meninjau dan menerbitkan draf tersimpan. Hasil terbit dikunci. Siswa hanya membaca hasil terbit miliknya; wali hanya hasil anak yang terhubung dan aktif. Admin/kepala sekolah memiliki akses baca pengawasan melalui RLS, tanpa hak mengubah. Riwayat isi, status, aktor, waktu dan revisi dicatat di `task_feedback_events`; riwayat draf tidak terbuka untuk siswa/wali. Tampilan riwayat dan pengawasan belum dibuat.
+
+Migration `20261111233649_task_feedback` diterapkan; dua tabel memakai RLS dan menolak SELECT anonim. Security Advisor tidak melaporkan temuan. `npm run check` lulus dengan 88 tes. Sepuluh skenario browser desktop/ponsel lulus melalui eksekusi awal dan pengulangan dua tes guru setelah pemilih elemen tes diperbaiki. Cakupan meliputi draf/edit/publikasi, akses wali, serta regresi pengumpulan normal/respons hilang/duplikat. Browser menggunakan layanan tiruan; UAT akun sekolah masih diperlukan. Asesmen numerik terpisah kini tersedia sesuai keputusan pengguna, dengan maksimum per asesmen dan publikasi manual. Laporan akademik dan koreksi umpan balik tugas terbit masih terbuka.
+
+## Verifikasi pengumpulan tugas — 12 November 2026
+
+Pemeriksaan ulang langsung pada riwayat Supabase mengonfirmasi migration `20261111232717_task_submissions` sudah diterapkan. Metadata tabel mengonfirmasi RLS aktif dan izin SELECT anonim ditolak. Ini mengoreksi catatan sebelumnya yang menyatakan penerapan belum terverifikasi; tidak ada baris data pribadi yang dibaca.
+
+Lint, TypeScript, 87 tes lokal dan build produksi lulus. Enam tes browser (desktop dan ponsel) lulus untuk pengiriman normal, respons pengiriman hilang, serta konflik pengiriman ganda. Ketika respons hilang, tombol kirim dikunci sampai status berhasil dimuat ulang; teks jawaban tetap tersedia. Pengujian browser menggunakan layanan tiruan dan belum menggantikan UAT akun sekolah. Umpan balik tugas dan asesmen akademik terpisah telah ditambahkan pada tahap berikutnya; lihat bagian terkait di atas.
+
+## Verifikasi ulang - 11 November 2026
+
+Build yang sempat gagal akibat tipe sesi demo dan akses klien Supabase sudah diperbaiki. Lint, TypeScript, build, 81 tes unit/database, dan 86 tes browser desktop/ponsel dengan API tiruan lulus. Supabase kini memiliki sembilan migration, 16 tabel publik dengan RLS, dan 40 policy. Trigger jurnal serta kedua policy aktif. Data API menolak akses anonim ke seluruh 16 tabel dan Security Advisor tidak melaporkan temuan. Pengujian dengan akun sekolah masih tertunda.
+
+## Arsip fondasi (10–13 November 2026)
 
 ## Sumber kebutuhan
 
@@ -200,7 +346,7 @@ Penghubungan akun guru/siswa di UI, data wali dan hubungan wali-anak terverifika
 3. Rekap rentang tanggal tersedia; siapkan interval keanggotaan sebelum mendukung backdate dan rancang persetujuan koreksi.
 4. Lanjutkan pembelajaran, supervisi, kebiasaan, Storage privat dan persetujuan dokumen; jangan menganggap dashboard umum sebagai implementasi modul-modul ini.
 
-## Impor Excel ? tersedia
+## Impor Excel — tersedia
 
 Template XLSX terikat sesi, validasi/preview sebelum konfirmasi, koreksi beralasan, penyimpanan atomik/idempoten dan riwayat metadata sudah tersedia. File asli tidak disimpan. Batas: 2 MB, satu sheet, 100 peserta; formula/makro/external workbook ditolak. Baris kosong atau tidak disertakan tidak mengubah status.
 
@@ -221,10 +367,6 @@ Rute `/jurnal`, formulir dengan konfirmasi, snapshot referensi server, retry ID 
 Migration jurnal diuji di PostgreSQL terisolasi dan diterapkan di Supabase setelah persetujuan. Versi hosted `20261111070725_teaching_journals.sql` sudah diselaraskan dengan nama berkas lokal.
 
 Lint, TypeScript, build dan 80 tes unit/database lulus. Seluruh 18 tes jurnal desktop/ponsel lulus; regresi browser penuh final 86/86 lulus (1,8 menit). Pengujian browser menggunakan API tiruan, bukan akun sekolah sesungguhnya.
-
-## Verifikasi ulang - 11 November 2026
-
-Build yang sempat gagal akibat tipe sesi demo dan akses klien Supabase sudah diperbaiki. Lint, TypeScript, build, 81 tes unit/database, dan 86 tes browser desktop/ponsel dengan API tiruan lulus. Supabase kini memiliki sembilan migration, 16 tabel publik dengan RLS, dan 40 policy. Trigger jurnal serta kedua policy aktif. Data API menolak akses anonim ke seluruh 16 tabel dan Security Advisor tidak melaporkan temuan. Pengujian dengan akun sekolah masih tertunda.
 
 ## Rekonsiliasi acuan
 
@@ -286,131 +428,3 @@ Migration 20261111092126_class_materials diterapkan dan versi lokal diselaraskan
 Guru dapat menyusun, menerbitkan dan mengarsipkan tugas teks dengan tenggat di /tugas. Siswa dan wali melihat tugas terbit sesuai akses kelas yang sudah berlaku. Tenggat wajib diisi dan tidak dapat diubah setelah terbit. Database menolak publikasi untuk tenggat sebelum hari sekolah saat ini. Pengumpulan jawaban teks dan umpan balik tersedia. Asesmen akademik tersedia terpisah; pengaitan nilai asesmen dengan tugas masih memerlukan alur lanjutan.
 
 Migration 20261111092744_class_tasks sudah diterapkan. Metadata mengonfirmasi RLS, constraint dan trigger tenggat. Security Advisor tidak melaporkan temuan. Build, 87 tes lokal dan empat tes browser lulus dengan data contoh.
-
-## Pemeriksaan workspace — 12 November 2026
-
-Antarmuka TaskSubmissions sudah tersedia dan terhubung dari halaman tugas. Siswa dapat mengirim jawaban teks, sedangkan guru dapat membaca jawaban dengan pagination. Penerapan migration task_submissions di remote dan pengujian browser alur pengumpulan belum diverifikasi pada pemeriksaan ini.
-
-npm run check berhasil: lint, TypeScript, 87 tes lokal dan build produksi lulus. Hasil ini tidak membuktikan seluruh kebutuhan PRD telah selesai. Pekerjaan terbuka tetap meliputi verifikasi pengumpulan, umpan balik dan penilaian, jadwal, administrasi dokumen, kehadiran guru, serta UAT akun sekolah.
-
-Migration 20261111232717_task_submissions menambah pengumpulan satu jawaban teks per siswa sebelum akhir hari tenggat (WIB). Siswa dapat membaca jawaban sendiri dan guru penulis tugas dengan penugasan aktif dapat membaca jawaban siswa. Jawaban terkirim tidak dapat diubah. RLS aktif, akses anonim ditolak menurut metadata, dan Security Advisor tidak melaporkan temuan. Build dan 87 tes lokal lulus. Uji browser khusus dan uji akun sekolah belum dijalankan.
-
-## Asesmen akademik — 12 November 2026
-
-Rute `/asesmen` tersedia bagi guru, kepala sekolah, admin, siswa dan wali sesuai RLS. Guru membuat asesmen formatif, sumatif, proyek, praktik/keterampilan atau sikap/karakter untuk penugasannya, dengan tanggal dalam tahun ajaran dan nilai maksimum positif per asesmen (maksimal dua desimal). Pengguna secara eksplisit menyetujui fondasi ini serta publikasi manual oleh guru tanpa perhitungan rapor otomatis.
-
-Daftar peserta disalin dari keanggotaan kelas aktif saat pembuatan. Nilai awal kosong, berbeda dari nol. Guru dapat mengedit metadata draf dan mengisi nilai/catatan. Publikasi wajib menunggu seluruh peserta dinilai dan tanggal asesmen tidak di masa depan. Metadata terbit dikunci; koreksi nilai terbit memerlukan alasan pada setiap permintaan dan dicatat bersama nilai lama/baru, catatan, aktor, waktu serta revisi. Guru/admin/kepala sekolah dapat membaca riwayat; siswa/wali hanya hasil terbaru yang terbit sesuai identitas/tautan anak aktif. Admin/kepala sekolah tidak dapat menulis nilai atau menerbitkan hasil.
-
-Migration `20261111234856_academic_assessments` diterapkan; tiga tabel memakai RLS, SELECT anonim ditolak dan Security Advisor kosong. `npm run check` lulus dengan 93 tes; setelah memperkuat alasan koreksi, 60 tes database dijalankan ulang dan lulus. Sepuluh tes browser terfokus diverifikasi di desktop/ponsel: delapan lulus awal dan dua alur guru lulus setelah memperbaiki selector combobox dalam tes. Pemeriksaan API dengan `limit=0` lulus untuk semua tabel yang tercantum, tanpa membaca baris data.
-
-Rekap/filter/ekspor CSV/Excel/PDF serta grafik perkembangan telah ditambahkan pada tahap berikutnya. Kewenangan khusus wali kelas, pengelolaan perubahan daftar peserta dan UAT akun sekolah masih terbuka. Tes lokal memakai PostgreSQL terisolasi dan tes browser memakai layanan tiruan; belum membuktikan UAT produksi atau uji beban serentak. Perhitungan rapor otomatis tidak termasuk fondasi sementara yang disetujui.
-
-## Umpan balik tugas — 12 November 2026
-
-Guru penulis tugas dengan penugasan aktif dapat menyimpan dan mengedit draf umpan balik per jawaban, kemudian meninjau dan menerbitkan draf tersimpan. Hasil terbit dikunci. Siswa hanya membaca hasil terbit miliknya; wali hanya hasil anak yang terhubung dan aktif. Admin/kepala sekolah memiliki akses baca pengawasan melalui RLS, tanpa hak mengubah. Riwayat isi, status, aktor, waktu dan revisi dicatat di `task_feedback_events`; riwayat draf tidak terbuka untuk siswa/wali. Tampilan riwayat dan pengawasan belum dibuat.
-
-Migration `20261111233649_task_feedback` diterapkan; dua tabel memakai RLS dan menolak SELECT anonim. Security Advisor tidak melaporkan temuan. `npm run check` lulus dengan 88 tes. Sepuluh skenario browser desktop/ponsel lulus melalui eksekusi awal dan pengulangan dua tes guru setelah pemilih elemen tes diperbaiki. Cakupan meliputi draf/edit/publikasi, akses wali, serta regresi pengumpulan normal/respons hilang/duplikat. Browser menggunakan layanan tiruan; UAT akun sekolah masih diperlukan. Asesmen numerik terpisah kini tersedia sesuai keputusan pengguna, dengan maksimum per asesmen dan publikasi manual. Laporan akademik dan koreksi umpan balik tugas terbit masih terbuka.
-
-## Verifikasi pengumpulan tugas — 12 November 2026
-
-Pemeriksaan ulang langsung pada riwayat Supabase mengonfirmasi migration `20261111232717_task_submissions` sudah diterapkan. Metadata tabel mengonfirmasi RLS aktif dan izin SELECT anonim ditolak. Ini mengoreksi catatan sebelumnya yang menyatakan penerapan belum terverifikasi; tidak ada baris data pribadi yang dibaca.
-
-Lint, TypeScript, 87 tes lokal dan build produksi lulus. Enam tes browser (desktop dan ponsel) lulus untuk pengiriman normal, respons pengiriman hilang, serta konflik pengiriman ganda. Ketika respons hilang, tombol kirim dikunci sampai status berhasil dimuat ulang; teks jawaban tetap tersedia. Pengujian browser menggunakan layanan tiruan dan belum menggantikan UAT akun sekolah. Umpan balik tugas dan asesmen akademik terpisah telah ditambahkan pada tahap berikutnya; lihat bagian terkait di atas.
-
-## Jadwal pelajaran — 13 November 2026
-
-Fondasi `/jadwal` tersedia: admin membuat/mengubah/menonaktifkan jadwal mingguan dengan rentang tanggal dalam tahun ajaran, penugasan tetap, alasan wajib, audit database, dan revisi optimistis. Server menolak bentrok guru atau kelas, memeriksa kejadian hari dalam irisan periode, serta mengunci transaksi penulisan jadwal. Guru membaca sesuai penugasan aktif; siswa dan wali sesuai kelas dan hubungan terverifikasi. Kepala sekolah membaca; pending dan anonim ditolak. Daftar dipaginasi 25 item; admin/kepala sekolah dapat melihat jadwal nonaktif melalui mode pengelolaan.
-
-Migration `20261113000504_lesson_schedules` diterapkan dan riwayat dicocokkan. Pemeriksaan metadata memastikan RLS aktif pada dua tabel dan INSERT langsung klien ditolak. Tidak membaca data pribadi. Node 24 `npm run check` lulus: 100 tes, lint, tipe, build. Empat tes browser khusus jadwal desktop/ponsel lulus dengan API tiruan (ditambah dua regresi supervisi yang ikut filter). Belum UAT sekolah; uji konkurensi beberapa koneksi belum dilakukan. Peringatan ukuran chunk PDF lama tetap ada.
-
-Pekerjaan berikutnya: usulan perubahan jadwal oleh guru sesuai PRD, tampilan riwayat pengaturan, dan UAT. Skema nilai tetap sementara; tidak menghitung rapor otomatis.
-
-
-
-
-
-Hasil final rilis 13 November: pengulangan mobile lulus 82/82. Total cakupan akhir browser 164 skenario lulus (82 desktop + 82 mobile pada run terpisah setelah server tes awal berhenti). URL repo GitHub masih menunggu pengguna.
-## Batas proyek dan tabel contoh Supabase — 13 November 2026
-
-Folder `SI_STIR_HEBAT_Starter/si-stir-hebat` adalah satu-satunya root aplikasi utama untuk Codex: React/Vite, bukan Next.js. Demo Next.js terpisah `D:\code\my-app` bukan bagian dari aplikasi dan tidak boleh menjadi lokasi kerja lanjutan.
-
-Migration remote `20261113074045_create_private_todos` dibuat atas permintaan pengguna untuk contoh data privat. File migration disimpan di `supabase/migrations`, RLS membatasi setiap baris kepada pemiliknya, dan `scripts/check-supabase.mjs` memeriksa penolakan akses anonim. Tabel ini kosong dan tidak digunakan oleh UI SI STIR HEBAT. Tidak ada migration yang diterapkan ulang.
-
-## Persiapan rilis operasional — 13 November 2026
-
-## Audit kesesuaian workspace — 14 November 2026
-
-Pemeriksaan langsung pada root aplikasi: npm run check lulus (lint, TypeScript, 101 tes, build). Build memberi peringatan chunk mesin PDF 790,69 KB dan font 855,16 KB. Browser dan UAT akun sekolah tidak diulang pada audit ini.
-
-Fitur yang terkonfirmasi dalam kode mencakup asesmen, laporan akademik dan usulan jadwal. Pernyataan historis bahwa usulan jadwal masih pekerjaan berikutnya sudah tertinggal. Folder docs/references serta berkas PRD/RBAC tidak ditemukan dalam workspace starter, sehingga kesesuaian penuh terhadap dokumen asli belum dapat diverifikasi.
-
-Git yang ditemukan masih repository induk D:/code, tanpa commit, dengan proyek my-app dan berkas induk lain ikut tercakup. Root aplikasi tetap D:/code/SI_STIR_HEBAT_Starter/si-stir-hebat sesuai AGENTS.md. Penataan repository perlu diselesaikan sebelum publikasi. Tabel contoh todos tercatat terpisah dan tidak memiliki alur UI sekolah.
-
-Tanggal sekolah masih memakai Asia/Jakarta pada frontend dan migration. Konfirmasi zona waktu operasional sekolah diperlukan sebelum mengubah aturan tanggal/tenggat bersama-sama. Skema asesmen tetap sementara sesuai keputusan pengguna. Modul dokumen, kehadiran guru, fitur perkembangan siswa dan UAT masih perlu dituntaskan berdasarkan acuan resmi.
-14 November 2026: Repo https://github.com/mariomagfii-sys/si-stir-hebat berhasil di-clone ke D:/code/SI_STIR_HEBAT_Starter/github-release. Paket rilis 108 berkas diunggah ke main, commit 86fe0e79224d4d607afdd30cfeb633a24b8a5fa9; git ls-remote cocok dengan HEAD lokal. Tidak menyertakan .env.local, .env, .vercel atau lampiran pribadi. CI GitHub belum diverifikasi (konektor memberi 404; Git CLI berhasil). Deployment Vercel dan aktivasi admin tetap belum selesai.
-14 November 2026: Login Vercel berhasil melalui device authorization; proyek si-stir-hebat dibuat dan deployment CLI produksi READY (dpl_DHXi8ktz5chWQQji1wTJQdrLMjEk). URL publik https://si-stir-hebat-blue.vercel.app. Empat route HTTP 200; browser headless mobile memverifikasi login nyata (bukan demo), redirect /jadwal tanpa sesi, tidak meluber dan tidak ada pageerror. Hanya akses anonim, tidak membaca data pribadi. Node24 diselaraskan package/lock (push b07638d). Panduan produksi/aktivasi diunggah commit36f8c53. GitHub auto-deploy belum terhubung karena Vercel meminta GitHub Login Connection. Site URL/redirect Auth, aktivasi admin, login/email nyata dan UAT tetap belum terverifikasi. Tujuan PRD penuh belum selesai.
-
-## Ringkasan sekolah dashboard — 14 November 2026
-
-PRD 5.1 ditindaklanjuti: admin/kepala sekolah melihat jumlah siswa, guru dan kelas berstatus aktif. Query HEAD dengan exact count, bukan mengunduh baris atau menghitung halaman; RLS tabel tetap berlaku. Label menjelaskan kelas mencakup seluruh tahun ajaran dan siswa berasal dari registri, bukan enrollment. Nol, belum dimuat dan gagal dibedakan. Partial failure mempertahankan jumlah yang berhasil; retry tersedia. Tidak ada query ringkasan pada guru/siswa/wali/pending. Tautan menuju data master terkait tersedia.
-
-npm run check Node24 lulus 101 tes, lint, tipe dan build. Sepuluh tes browser khusus ringkasan desktop/ponsel lulus, meliputi jumlah1205, nol, missing count, retry dan pembatasan permintaan peran. Tidak ada perubahan database atau pembacaan data pribadi. Commit eb1d4f8 sudah dipush; deployment produksi baru sedang diverifikasi. Dashboard PRD masih perlu progres supervisi, administrasi, aktivitas/notifikasi dan ringkasan spesifik guru/keluarga; jangan menganggap bagian5.1 selesai penuh.
-Deployment ringkasan dashboard dpl_BWAUuwkXSpGnB84RPsjVr4nPdehm terverifikasi READY dan alias produksi aktif. Smoke browser anonim produksi lulus ulang setelah deployment.
-
-## Pembaruan antarmuka dan regresi browser — 14 November 2026
-
-Beranda tidak lagi menyatakan bahwa aplikasi belum menggunakan data sekolah sebenarnya. Pesan sekarang menjelaskan bahwa layanan mengikuti peran akun dan pengguna perlu masuk dengan akun sekolah yang perannya sudah ditetapkan. Render halaman beranda dan route login terverifikasi di browser lokal. `npm run check` lulus: lint, TypeScript, 101 tes, dan build produksi.
-
-Run browser penuh menjalankan 174 skenario desktop/ponsel: 172 lulus dan dua gagal pada selector tes jaringan pengumuman yang ambigu karena dashboard kini juga menampilkan error ringkasan. Selector diperbaiki agar menargetkan pesan pengumuman; tes terfokus lulus pada desktop dan ponsel (2/2). Suite browser penuh belum dijalankan ulang setelah perbaikan selector. Peringatan ukuran chunk PDF tetap dipertahankan: mesin 790,69 KB dan font 855,16 KB; pemuatan PDF tetap dinamis.
-
-UAT akun sekolah, URL Auth hosted, dan aktivasi admin masih memerlukan verifikasi pada proyek/akun pemilik. Tidak ada perubahan database, konfigurasi hosted, atau data sekolah nyata dalam pembaruan ini.
-
-## Context loop proyek — 14 November 2026
-
-`PROJECT_CONTEXT.md` dan `PROGRESS.md` dibuat di root aplikasi untuk meneruskan konteks lintas sesi. Isinya mengikuti React/Vite, fitur yang benar-benar tersedia, dan palet Neo-Tactile Edu proyek; bukan contoh stack/tema generik. Prioritas modul baru kini diblokir sampai dokumen PRD/RBAC/database/UI-UX tersedia kembali: `docs/references/` tidak ada, dan indeks arsip starter lokal yang diperiksa juga tidak memuat dokumen acuan tersebut. UAT nyata tetap memerlukan pemilik akun sekolah.
-
-## Ringkasan kebutuhan dan arah desain — 14 November 2026
-
-Pengguna memberikan target peran: supervisi/pengendalian administrasi untuk kepala sekolah; perangkat, absensi, asesmen, dan hasil supervisi untuk guru; 7 Kebiasaan, kelas 1–6, PJOK/PAI untuk murid; pemberitahuan ketidakhadiran ke sekolah/guru untuk wali. Arahan desain terbaru adalah mobile-first, ungu tua/lilac/biru muda/pink, font profesional-playful. `PROJECT_CONTEXT.md` dan `AGENTS.md` diselaraskan untuk fitur baru/polish yang diminta; halaman selesai tidak dirombak.
-
-Ringkasan ini belum menetapkan proses persetujuan, siklus pencatatan kebiasaan, visibilitas data anak, atau kanal dan alur pemberitahuan absen. Tidak ada migration atau implementasi fitur baru dibuat sampai detail tersebut atau acuan lengkap tersedia.
-
-## Dashboard kepala sekolah — 14 November 2026
-
-Dashboard menampilkan hitungan baca-saja supervisi berdasarkan tahap terakhir dan modul ajar berstatus diajukan/perlu revisi. Query memakai exact count HEAD terhadap tabel yang sudah ada, mengikuti RLS kepala sekolah, dan hanya berjalan untuk peran `principal`; draf pribadi guru tidak dihitung. Jika hitungan tidak tersedia, UI membedakannya dari nol, menjelaskan kegagalan, dan menyediakan retry. Ringkasan tidak mengambil nama, catatan supervisi, atau isi modul. Gaya kartu mengikuti palet ungu/lilac/biru/pink tanpa merombak halaman yang selesai.
-
-Validasi: `npm run check` lulus (lint, TypeScript, 101 tes unit/database, build); enam tes browser terfokus desktop/ponsel lulus untuk jumlah tahap/status, pembatasan peran, nol versus kegagalan, retry, dan overflow horizontal. Tidak ada migration atau perubahan hosted. Tahap backlog berikutnya, 7 Kebiasaan, masih menunggu keputusan pencatatan, frekuensi, validasi, dan visibilitas data.
-
-## Optimasi font PDF - 14 November 2026
-
-Build hanya menyertakan font Roboto normal dan tebal yang digunakan rekap akademik, tetap dimuat dinamis saat ekspor. Chunk font berkurang dari 855,16 KB menjadi 419,57 KB (gzip 465,45 ke 225,08 KB); mesin PDF 790,69 KB masih memicu peringatan. Jika laporan memakai italic, varian font perlu ditambahkan kembali. Node 24 `npm run check` lulus (104 tes, lint, typecheck, build); tes unduhan PDF desktop dan ponsel lulus dengan API tiruan. UAT akun sekolah belum dilakukan.
-
-## Daftar pekerjaan prioritas sementara - 14 November 2026
-
-Ini daftar dari kode dan catatan proyek, bukan hasil pencocokan lengkap PRD: `docs/references/` dan dokumen PRD/RBAC asli tidak tersedia. Prioritas dan kewenangan harus ditinjau kembali setelah acuan tersedia.
-
-| Prioritas | Celah atau verifikasi | Bukti dan batas |
-| --- | --- | --- |
-| 1 | UAT per peran, Auth/redirect, email dan aktivasi admin | Panduan ada; akun sekolah dan pengaturan hosted belum diverifikasi. Aktivasi oleh pemilik. |
-| 2 | Komunikasi guru-wali dan administrasi dokumen | Tidak ada rute atau modul khusus pada `src/app/App.tsx`; kontrak pesan, penerima, akses dan persetujuan belum dikonfirmasi. |
-| 3 | Kebiasaan siswa | Ada folder fitur dan migration lokal, tetapi tidak ada rute UI; penerapan hosted belum terverifikasi pada sesi ini. |
-| 4 | Dashboard dan alur perkembangan/administrasi lain | Catatan proyek menyebut ringkasan khusus peran dan progres belum lengkap; diperlukan PRD untuk mengukur cakupan. |
-| 5 | Aturan nilai resmi dan zona waktu sekolah | Keputusan sementara dan tanggal Asia/Jakarta masih perlu dikonfirmasi; tidak menyimpulkan aturan rapor. |
-
-Telaah penuh C3 terblokir oleh ketiadaan dokumen acuan; daftar ini tidak menetapkan persyaratan resmi.
-
-## Fondasi komunikasi lokal - 14 November 2026
-
-Migration `20261114083827_komunikasi` dan API bertipe membatasi pesan teks append-only ke guru dan wali dengan penugasan, keanggotaan, dan relasi aktif. Pencabutan akses diuji di PGlite; `npm run check` Node 24 lulus 108 tes, lint, tipe dan build. Migration belum diterapkan ke hosted; `student_habits` yang lebih awal juga belum tercatat di riwayat hosted. UI, verifikasi hosted, UAT serta aturan resmi retensi dan pengawasan masih terbuka.
-
-# Status backend Codex — 20 November 2026
-
-- Stack aktif tetap React 19 + Vite + TypeScript + React Router + Supabase; tidak ada perpindahan ke Next.js.
-- Node v24.22.3: `npm test` lulus **129/129**, termasuk 70 tes database PGlite. `node scripts/check-migrations.mjs` lulus: 35 berkas, timestamp unik dan naik.
-- Full `npm run check` terakhir belum lulus: typecheck melaporkan kontrak map kategori di `src/features/notifications/NotificationCenter.tsx`, file UI milik Qoder. Menunggu label `document`, `teaching_module`, dan `communication`; Codex tidak mengedit UI.
-- Build negatif produksi diuji langsung memakai Vite dengan kedua `VITE_SUPABASE_*` kosong: berhenti dengan pesan konfigurasi tidak valid (exit 1 sebelum build). Tes production stub memastikan akun demo kosong dan session storage tidak ditulis. `dist` belum diganti ulang pada gerbang akhir tugas ini.
-- Hosted read-only 20 November: 23 migration hosted cocok dengan 23 awal lokal; `select count(*) from public.todos` = 0. Security Advisor menampilkan 1 WARN eksternal `auth_leaked_password_protection`. **Tidak ada migration hosted yang diterapkan.**
-- Lokal memiliki 35 migration. Penerapan hosted ditahan sampai owner menyelesaikan WARN; PGlite bukan bukti hosted.
-- Backend tambahan: kategori/riwayat versi/review/event dokumen + API typed; kategori dan fanout notifikasi dengan referensi; katalog dan rekap kebiasaan mingguan. X6 absensi guru dan X8 overview/index terukur telah diuji lokal; uji urutan retensi Supabase lokal, deploy, dan merge masih tertahan.
-- Branch `ai/qoder-palette-d8` 20 November (Qoder): HEAD sempat merujuk modul untracked; dipulihkan `ReferenceNotice` (`b0e3600`), `auth-context` + `dashboard-overview` (`2ce1ca2`). API dan wiring tambahan masih berada di working tree sehingga suite hijau adalah bukti working tree, bukan checkout HEAD. X11 tertahan: branch lokal kandidat Qoder lain terdeteksi tetapi belum diverifikasi terisolasi; `main` dan remote tidak dikonfigurasi, dan workspace punya staged/unstaged/untracked changes. Tidak ada perubahan hosted.
-- Browser suite 228/228 adalah laporan Qoder sebelumnya dengan API tiruan (port 5353); suite tidak dijalankan ulang pada pekerjaan ini. UAT akun nyata, email, Auth URL/redirect, dan kesiapan operasional belum diverifikasi.

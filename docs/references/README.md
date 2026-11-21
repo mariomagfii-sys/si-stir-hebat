@@ -14,7 +14,7 @@ Folder asal: `C:/Users/axioo/Downloads/files/` (lokal, bukan bagian repo).
 
 | No | Berkas | Versi | Tanggal | SHA-256 | Catatan isi |
 | --- | --- | --- | --- | --- | --- |
-| 1 | [`PRD_SI_STIR_HEBAT_v1_0.md`](PRD_SI_STIR_HEBAT_v1_0.md) | 1.0 | 30 Oktober 2026 | `9c3d8c628246bd9e0ac71881304b2ea40b7f9036d7c62ae71a986d41dc773128` | Kebutuhan produk dan ruang lingkup. Bagian 10 (Next.js/Tailwind/Zod/monorepo) diperbarui oleh D1/D3. |
+| 1 | [`PRD_SI_STIR_HEBAT_v1_0.md`](PRD_SI_STIR_HEBAT_v1_0.md) | 1.0 | 30 Oktober 2026 | `9c3d8c628246bd9e0ac71881304b2ea40b7f9036d7c62ae71a986d41dc773128` | Kebutuhan produk dan ruang lingkup. Bagian 10 (Next.js/Tailwind/Zod/monorepo) superseded oleh D4 tanggal 20 November 2026 dan SAD; berkas asli tidak diubah. |
 | 2 | [`RBAC_matriks.md`](RBAC_matriks.md) | Tanpa versi | Tanpa tanggal | `bf5c68dda842eb118da10842ff92703a9aa905b71e38aee9e97f54bb30280c02` | Uraian peran dan kewenangan; belum berupa matriks role × modul yang siap disahkan. |
 | 3 | [`Database_Blueprint_SI_STIR_HEBAT.md`](Database_Blueprint_SI_STIR_HEBAT.md) | 1.0 | 3 November 2026 | `30a12552cab859cfd66293a8b63977e03612b46de5af626b657a82aea0dae6c2` | Rancangan basis data; belum direkonsiliasi penuh dengan migration yang terpasang. |
 | 4 | [`API_specifiqation.md`](API_specifiqation.md) | 1.0.0 | Tanpa tanggal | `0a9d30d0e176d17dfb54f6d389c7abb93e2f774e0aff0a3b235016433fb6673b` | Berisi panduan umum dan bagian 9 API Specification; bukan katalog endpoint konkret. Ejaan nama berkas dipertahankan. |
@@ -27,8 +27,8 @@ Folder asal: `C:/Users/axioo/Downloads/files/` (lokal, bukan bagian repo).
 Urutan dari yang paling mengikat ke yang paling rendah:
 
 1. **Aturan keras** — `AGENTS.md`, master prompt multi-AI, dan larangan keamanan yang berlaku. Tidak boleh dilanggar oleh dokumen lain.
-2. **Keputusan pemilik** — `docs/DECISIONS.md`, terutama keputusan bertanggal 15 November 2026 (D1–D4). Keputusan pemilik yang lebih baru menggantikan bagian acuan yang bertentangan.
-3. **PRD** — kebutuhan produk, dengan bagian 10 sudah diperbarui oleh D1/D3.
+2. **Keputusan pemilik** — `docs/DECISIONS.md`, terutama keputusan bertanggal 20 November 2026 (D1–D8). Keputusan pemilik yang lebih baru menggantikan bagian acuan yang bertentangan; bila bertentangan, D1–D8 tanggal 20 November 2026 menggantikan keputusan 15 November 2026.
+3. **PRD** — kebutuhan produk, dengan bagian 10 superseded oleh D4 (20 November 2026) dan SAD.
 4. **SAD/API** — `kerangka_app.md` dan `API_specifiqation.md`.
 5. **Blueprint** — Database Blueprint, UI/UX Blueprint, RBAC matriks, serta Implementation Plan sebagai rencana pendukung.
 6. **Kode, migration, tes, dan konfigurasi** — bukti keadaan saat ini, bukan sumber kewenangan. Jika kode berbeda dari acuan, kode tidak otomatis benar; perbedaan dicatat dan diputuskan pemilik.
@@ -37,10 +37,16 @@ Jika terjadi konflik, tingkat yang lebih tinggi menang. Konflik yang belum diput
 
 ## 4. Keputusan yang sudah mengubah acuan
 
-- **D1 (15 November 2026)** — Next.js disetujui pemilik untuk migrasi bertahap setelah Codex/Cursor aktif. Sampai itu kode tetap Vite. Ini menggantikan larangan migrasi pada `AGENTS.md` dan pilihan stack di PRD bagian 10.
-- **D2 (15 November 2026)** — KKM 75, persen = skor/maksimum × 100, hanya indikator tampilan. Ini menggantikan larangan ketuntasan pada keputusan skema asesmen sementara di `docs/DECISIONS.md`.
-- **D3 (15 November 2026)** — Tailwind, Zod, dan monorepo tidak diwajibkan; bagian 10 PRD diperbarui oleh D1.
-- **D4 (15 November 2026)** — retensi data anak **BELUM DIPUTUSKAN**. Tidak ada penghapusan data yang boleh dibuat sampai pemilik mengisi keputusan.
+- **D1 (20 November 2026)** — `public.todos` dihapus lewat migration baru setelah dipastikan kosong.
+- **D2 (20 November 2026)** — draf umpan balik tugas hanya untuk penulis; admin/kepala sekolah hanya membaca yang terbit.
+- **D3 (20 November 2026)** — mode demo hanya saat `import.meta.env.DEV`; akun demo tidak masuk bundel produksi.
+- **D4 (20 November 2026)** — bagian 10 PRD (Next.js/Tailwind/Zod/monorepo) superseded oleh SAD dan stack berjalan (React 19 + Vite + TypeScript + React Router + Supabase). Ini menggantikan D1/D3 tanggal 15 November 2026 tentang migrasi Next.js.
+- **D5 (20 November 2026)** — retensi sementara: registri/absensi/nilai/jurnal selama siswa terdaftar + 5 tahun ajaran; audit 5 tahun; pesan 1 tahun ajaran; bukti supervisi 2 tahun ajaran. Tanpa penghapusan otomatis.
+- **D6 (20 November 2026)** — 7 Kebiasaan diisi wali, direkap guru, tanpa peringkat; sel kosong berarti "belum diisi".
+- **D7 (20 November 2026)** — laporan ketidakhadiran wali diverifikasi guru sebelum menjadi status absensi; notifikasi hanya di aplikasi.
+- **D8 (20 November 2026)** — palet dimigrasikan bertahap ke ungu tua/lilac/biru muda/pink sesuai UI/UX Blueprint.
+
+Keputusan 15 November 2026 (D1 Next.js, D2 KKM 75, D3 Tailwind/Zod/monorepo, D4 retensi belum diputuskan) tetap tercatat sebagai riwayat. D1 dan D3 lama tidak lagi menjadi arahan aktif; D4 lama digantikan D5 tanggal 20 November 2026. D2 lama (indikator ketuntasan tampilan) tidak bertentangan dan tetap berlaku.
 
 ## 5. Batas penggunaan
 

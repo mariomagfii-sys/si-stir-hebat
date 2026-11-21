@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../lib/auth-context'
+import { useAuth } from '../../components/auth/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
-import { schoolToday } from '../attendance/attendance-model'
+import { schoolToday } from '../../utils/date'
 import { supabase } from '../../lib/supabase'
 import { daftarKebiasaan, habitLabels, ringkasanKebiasaanMingguan, simpanKebiasaan, validasiKebiasaan, type HabitRecord, type HabitWeeklySummary } from './api'
+import { canReadHabits, canSubmitHabits, canValidateHabits, isParent, isStudent, isTeacher } from '../../utils/permissions'
 
 type RosterStudent = { id: string; name: string }
-
-const readerRoles = ['student', 'parent', 'teacher', 'principal', 'administrator']
 
 const weeklyKeys = ['bangun_pagi', 'beribadah', 'berolahraga', 'makan_sehat', 'gemar_belajar', 'bermasyarakat', 'tidur_cepat'] as const
 
@@ -67,12 +66,12 @@ function HabitsWorkspace({ userId }: { userId: string }) {
       if (profile.error) throw profile.error
       const currentRole = profile.data ? String(profile.data.role) : ''
       setRole(currentRole)
-      if (!readerRoles.includes(currentRole)) { setDenied(true); setStudents([]); return }
+      if (!canReadHabits(currentRole)) { setDenied(true); setStudents([]); return }
       let list: RosterStudent[] = []
       const roster = await supabase.rpc('habit_students')
       if (!roster.error) {
         list = ((roster.data ?? []) as RosterStudent[]).filter(item => item && typeof item.id === 'string')
-      } else if (currentRole === 'student') {
+      } else if (isStudent(currentRole)) {
         const own = await supabase.from('students').select('id').eq('profile_id', userId).eq('is_active', true).maybeSingle()
         if (own.error) throw own.error
         if (own.data?.id) list = [{ id: own.data.id, name: 'Saya' }]
@@ -180,8 +179,8 @@ function HabitsWorkspace({ userId }: { userId: string }) {
   }
 
   const nameById = new Map(students.map(item => [item.id, item.name]))
-  const canWrite = role === 'student' || role === 'parent'
-  const canValidate = role === 'teacher'
+  const canWrite = canSubmitHabits(role)
+  const canValidate = canValidateHabits(role)
   const marked = habits.filter(Boolean).length
   const existingDraft = rows.some(row => row.record_date === date && row.student_id === studentId)
   const recent = page === 0 ? rows.slice(0, 7) : []
@@ -192,8 +191,8 @@ function HabitsWorkspace({ userId }: { userId: string }) {
     {actionError && <p className="error" role="alert">{actionError}</p>}
     {loading ? <LoadingState /> : denied ? <EmptyState>Halaman kebiasaan tidak tersedia untuk peran ini.</EmptyState> : rosterError ? <ErrorNotice onRetry={() => void loadRoster()}>{rosterError}</ErrorNotice> : <>
       <p className="help">Catatan yang sudah tervalidasi dapat dilihat oleh murid, guru, wali, dan kepala sekolah sesuai relasi serta RLS.</p>
-      {(role === 'parent' || role === 'teacher') && students.length > 1 && <label className="habit-picker" htmlFor="habit-student">Pilih murid<select id="habit-student" value={studentId} onChange={event => pickStudent(event.target.value)}>{students.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
-      {students.length === 0 && <EmptyState>{role === 'teacher' ? 'Belum ada murid pada kelas penugasan Anda.' : 'Belum ada murid yang tertaut ke akun ini.'}</EmptyState>}
+      {(isParent(role) || isTeacher(role)) && students.length > 1 && <label className="habit-picker" htmlFor="habit-student">Pilih murid<select id="habit-student" value={studentId} onChange={event => pickStudent(event.target.value)}>{students.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+      {students.length === 0 && <EmptyState>{isTeacher(role) ? 'Belum ada murid pada kelas penugasan Anda.' : 'Belum ada murid yang tertaut ke akun ini.'}</EmptyState>}
       {students.length > 0 && canWrite && <form className="announcement-editor habit-editor" onSubmit={event => { event.preventDefault(); void save() }}>
         <fieldset className="journal-fields"><legend>Catatan harian: {existingDraft ? 'sudah diisi' : 'belum diisi'}</legend>
           <label htmlFor="habit-date">Tanggal</label>
@@ -244,7 +243,7 @@ function HabitsWorkspace({ userId }: { userId: string }) {
       </article>)}</div>}
       {students.length > 0 && (page > 0 || hasMore) && <nav className="pagination" aria-label="Halaman catatan kebiasaan">
         <button className="text-button" type="button" disabled={page === 0} onClick={() => setPage(value => Math.max(0, value - 1))}>Sebelumnya</button>
-        <span>Halaman {page + 1}</span>
+        <span aria-live="polite">Halaman {page + 1}</span>
         <button className="text-button" type="button" disabled={!hasMore} onClick={() => setPage(value => value + 1)}>Berikutnya</button>
       </nav>}
     </>}

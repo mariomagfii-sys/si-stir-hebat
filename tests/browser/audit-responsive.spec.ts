@@ -37,6 +37,8 @@ const audits = [
   { role: 'administrator', routes: ['/', '/dashboard', '/sekolah', '/absensi', '/jurnal', '/modul-ajar', '/jadwal', '/pengumuman', '/tautan-akun', '/notifikasi', '/kebiasaan', '/akun'] },
   { role: 'teacher', routes: ['/', '/dashboard', '/materi', '/tugas', '/asesmen', '/supervisi', '/komunikasi', '/jurnal', '/modul-ajar', '/jadwal', '/notifikasi', '/kebiasaan', '/laporan-ketidakhadiran'] },
   { role: 'parent', routes: ['/', '/dashboard', '/ruang-orang-tua', '/laporan-ketidakhadiran', '/notifikasi', '/kebiasaan', '/pengumuman'] },
+  { role: 'student', routes: ['/', '/dashboard', '/materi', '/tugas', '/asesmen', '/jadwal', '/pengumuman', '/notifikasi', '/kebiasaan', '/akun', '/laporan-ketidakhadiran', '/komunikasi', '/dokumen', '/absensi-guru'] },
+  { role: 'pending', routes: ['/', '/dashboard', '/akun', '/materi', '/tugas', '/asesmen', '/jadwal', '/pengumuman', '/notifikasi', '/kebiasaan', '/laporan-ketidakhadiran', '/komunikasi', '/dokumen', '/absensi-guru'] },
 ]
 
 for (const { role, routes } of audits) for (const path of routes) {
