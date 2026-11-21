@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, NavLink, useParams } from 'react-router-dom'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../components/auth/auth-context'
 import { supabase } from '../../lib/supabase'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { canReadMasterData, masterDefinitions, masterPayload, validateMaster, type MasterKind, type MasterRow, type ReferenceTable } from './master'
 import { createCsv, downloadCsv } from '../../utils/csv'
+import { isAdministrator, isPending, isPrincipal, isTeacher } from '../../utils/permissions'
 
 const pageSize = 20
 
@@ -32,7 +34,8 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
   const [editing, setEditing] = useState<MasterRow | 'new' | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
   const [confirming, setConfirming] = useState(false)
-  const canWrite = role === 'administrator'
+  const [referencesTruncated, setReferencesTruncated] = useState(false)
+  const canWrite = isAdministrator(role)
   const requiresYear = definition.fields.some(field => field.type === 'year' || field.reference === 'school_classes')
   const referenceTables = definition.fields.flatMap(field => field.reference ? [field.reference] : [])
   const missingReferences = referenceTables.some(table => !references[table]?.some(row => row.is_active))
@@ -43,6 +46,7 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
     setError('')
     setRole(null)
     setRows([])
+    setReferencesTruncated(false)
     async function load() {
       try {
         if (!supabase) throw new Error('configuration')
@@ -53,25 +57,32 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
         if (!canReadMasterData(kind, profile?.role ?? null)) return
         const columns = ['id', ...definition.fields.map(field => field.key)].join(',')
         const requests: PromiseLike<{ data: unknown; error: unknown }>[] = [supabase.from(kind).select(columns).order('created_at', { ascending: false }).order('id').range(page * pageSize, page * pageSize + pageSize)]
-        if (requiresYear) requests.push(supabase.from('academic_years').select('id,name,starts_on,ends_on').order('starts_on', { ascending: false }).limit(200))
+        if (requiresYear) requests.push(supabase.from('academic_years').select('id,name,starts_on,ends_on').order('starts_on', { ascending: false }).limit(201))
         const results = await Promise.all(requests)
         for (const result of results) if (result.error) throw result.error
         if (!active) return
         const data = results[0].data as unknown as MasterRow[]
         setRows(data.slice(0, pageSize))
         setHasNext(data.length > pageSize)
-        setYears((results[1]?.data ?? []) as unknown as MasterRow[])
+        const yearRows = (results[1]?.data ?? []) as unknown as MasterRow[]
+        const yearsTruncated = yearRows.length > 200
+        setYears(yearRows.slice(0, 200))
+        setHasNext(data.length > pageSize)
         const tables = definition.fields.flatMap(field => field.reference ? [field.reference] : [])
         if (tables.length) {
+          let truncated = yearsTruncated
           const choices = await Promise.all(tables.map(async table => {
             const columns = table === 'school_classes' ? 'id,name,is_active,academic_year_id' : 'id,name,is_active,code'
-            const { data, error } = await supabase!.from(table).select(columns).order('name').limit(1000)
+            const { data, error } = await supabase!.from(table).select(columns).order('name').limit(1001)
             if (error) throw error
-            if (data.length >= 1000) throw new Error('Reference selection exceeds supported limit')
+            if (data.length > 1000) truncated = true
             return [table, data as unknown as MasterRow[]] as const
           }))
-          if (active) setReferences(Object.fromEntries(choices))
-        }
+          if (active) {
+            setReferences(Object.fromEntries(choices))
+            setReferencesTruncated(truncated)
+          }
+        } else if (active && yearsTruncated) setReferencesTruncated(true)
       } catch (failure) {
         if (active) setError(typeof failure === 'object' && failure && 'code' in failure && failure.code === 'PGRST205'
           ? 'Layanan data sekolah sedang disiapkan. Silakan hubungi pengelola aplikasi.'
@@ -140,7 +151,7 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
       return target ? referenceLabel(target, reference) : 'Data terkait tidak tersedia'
     }
     if (typeof value === 'boolean') return value ? 'Aktif' : 'Nonaktif'
-    return String(value ?? '') || '—'
+    return String(value ?? '') || '-'
   }
 
   function referenceLabel(row: MasterRow, table: ReferenceTable) {
@@ -164,8 +175,9 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
     <nav className="master-tabs" aria-label="Jenis data sekolah">{Object.entries(masterDefinitions).filter(([key]) => canReadMasterData(key as MasterKind, role)).map(([key, item]) => <NavLink key={key} to={`/sekolah/${key}`}>{item.label}</NavLink>)}</nav>
     <h2>{definition.label}</h2>
     {message && <p className="status" role="status">{message}</p>}
-    {loading ? <LoadingState/> : error ? <ErrorNotice onRetry={() => setAttempt(value => value + 1)}>{error}</ErrorNotice> : !canReadMasterData(kind, role) ? <EmptyState>{role === 'pending' || !role ? 'Peran sekolah Anda belum ditetapkan. Hubungi administrator untuk akses data sekolah.' : 'Anda tidak memiliki izin untuk membuka jenis data ini.'}</EmptyState> : <>
-      {(kind === 'teachers' || kind === 'students') && <p className="status">{canWrite ? 'Catat data resmi sekolah menggunakan kode internal yang unik. Pencatatan ini tidak membuat akun login atau mengubah peran pengguna.' : role === 'principal' ? 'Daftar ini hanya dapat dibaca. Perubahan dilakukan oleh administrator.' : role === 'teacher' && kind === 'students' ? 'Hanya siswa aktif dalam kelas yang ditugaskan kepada Anda yang ditampilkan.' : 'Hanya data yang telah dihubungkan dengan akun Anda yang ditampilkan.'}</p>}
+    <ReferenceNotice truncated={referencesTruncated}/>
+    {loading ? <LoadingState/> : error ? <ErrorNotice onRetry={() => setAttempt(value => value + 1)}>{error}</ErrorNotice> : !canReadMasterData(kind, role) ? <EmptyState>{isPending(role) ? 'Peran sekolah Anda belum ditetapkan. Hubungi administrator untuk akses data sekolah.' : 'Anda tidak memiliki izin untuk membuka jenis data ini.'}</EmptyState> : <>
+      {(kind === 'teachers' || kind === 'students') && <p className="status">{canWrite ? 'Catat data resmi sekolah menggunakan kode internal yang unik. Pencatatan ini tidak membuat akun login atau mengubah peran pengguna.' : isPrincipal(role) ? 'Daftar ini hanya dapat dibaca. Perubahan dilakukan oleh administrator.' : isTeacher(role) && kind === 'students' ? 'Hanya siswa aktif dalam kelas yang ditugaskan kepada Anda yang ditampilkan.' : 'Hanya data yang telah dihubungkan dengan akun Anda yang ditampilkan.'}</p>}
       {canWrite && !editing && (kind !== 'school_settings' || rows.length === 0) && <button className="button" onClick={() => openEditor('new')} disabled={(requiresYear && years.length === 0) || missingReferences}>Tambah {definition.singular}</button>}
       {canWrite && missingReferences && <p className="status">Lengkapi data siswa/guru, kelas dan mata pelajaran yang aktif sebelum menambahkan relasi ini.</p>}
       {referenceTables.length > 0 && <p className="help">Untuk perpindahan atau perubahan penugasan, nonaktifkan relasi lama lalu tambahkan relasi baru. Pilihan pada relasi yang sudah disimpan tetap dipertahankan.</p>}
@@ -182,7 +194,7 @@ function MasterManager({ userId, kind }: { userId: string; kind: MasterKind }) {
         {confirming ? <div className="confirm-panel" role="alertdialog" aria-modal="false" aria-labelledby="confirm-period"><h3 id="confirm-period">{referenceTables.length ? 'Simpan relasi ini?' : 'Aktifkan periode ini?'}</h3><p>{referenceTables.length ? 'Pastikan pilihan dan status aktif benar. Relasi aktif dapat memengaruhi akses guru ke data siswa.' : 'Pastikan periode lama sudah dinonaktifkan dan kalender telah diperiksa.'}</p><div className="actions"><button className="button" type="button" disabled={saving} onClick={() => void persist()}>{saving ? 'Menyimpan…' : referenceTables.length ? 'Ya, simpan relasi' : 'Ya, aktifkan'}</button><button className="button secondary" type="button" disabled={saving} onClick={() => setConfirming(false)}>Kembali periksa</button></div></div>
           : <div className="actions"><button className="button" type="submit" disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan data'}</button><button className="button secondary" type="button" disabled={saving} onClick={() => setEditing(null)}>Batal</button></div>}
       </form>}
-      {!rows.length ? <EmptyState>Belum ada data {definition.singular} yang dapat ditampilkan untuk akun Anda.</EmptyState> : <div className="table-scroll"><table><caption>{definition.label}</caption><thead><tr>{definition.fields.map(field => <th scope="col" key={field.key}>{field.label}</th>)}{canWrite && <th scope="col">Tindakan</th>}</tr></thead><tbody>{rows.map(row => <tr key={String(row.id)}>{definition.fields.map(field => <td key={field.key}>{cell(row, field.key)}</td>)}{canWrite && <td><button className="text-button" disabled={Boolean(editing) || saving} onClick={() => openEditor(row)}>Ubah<span className="sr-only"> {rowTitle(row)}</span></button></td>}</tr>)}</tbody></table></div>}
+      {!rows.length ? <EmptyState>Belum ada data {definition.singular} yang dapat ditampilkan untuk akun Anda.</EmptyState> : <div className="table-scroll" role="region" aria-label={`Tabel ${definition.label} yang dapat digeser`} tabIndex={0}><table><caption>{definition.label}</caption><thead><tr>{definition.fields.map(field => <th scope="col" key={field.key}>{field.label}</th>)}{canWrite && <th scope="col">Tindakan</th>}</tr></thead><tbody>{rows.map(row => <tr key={String(row.id)}>{definition.fields.map(field => <td key={field.key}>{cell(row, field.key)}</td>)}{canWrite && <td><button className="text-button" disabled={Boolean(editing) || saving} onClick={() => openEditor(row)}>Ubah<span className="sr-only"> {rowTitle(row)}</span></button></td>}</tr>)}</tbody></table></div>}
       <nav className="pagination" aria-label="Halaman data sekolah"><button disabled={page === 0 || Boolean(editing)} onClick={() => setPage(value => value - 1)}>Sebelumnya</button><span>Halaman {page + 1}</span><button disabled={!hasNext || Boolean(editing)} onClick={() => setPage(value => value + 1)}>Berikutnya</button></nav>
     </>}
   </section>

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../components/auth/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { supabase } from '../../lib/supabase'
-import { schoolToday } from '../attendance/attendance-model'
+import { schoolToday } from '../../utils/date'
 import { SupervisionReport } from './SupervisionReport'
 import { SupervisionEvidence } from './SupervisionEvidence'
 import { followUp, stages } from './supervision-labels'
+import { canReadSupervision, isPrincipal, isTeacher } from '../../utils/permissions'
 
 const scores = ['Perlu pembinaan intensif', 'Mulai berkembang', 'Berkembang sesuai harapan', 'Sangat baik']
 const indicators = {
@@ -50,6 +52,7 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false)
   const [evidenceBusy, setEvidenceBusy] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [teachersTruncated, setTeachersTruncated] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -59,7 +62,7 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
   const [autosaveFailed, setAutosaveFailed] = useState(false)
   const writing = useRef(false)
   const current = rows.find(row => row.id === selected)
-  const principal = role === 'principal'
+  const principal = isPrincipal(role)
 
   useEffect(() => {
     const client = supabase
@@ -67,6 +70,7 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(false)
+    setTeachersTruncated(false)
     const load = async () => {
       try {
         const profile = await client.from('profiles').select('role').eq('id', userId)
@@ -75,17 +79,18 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
         if (controller.signal.aborted) return
         const nextRole = profile.data?.role ?? null
         setRole(nextRole)
-        if (nextRole !== 'principal' && nextRole !== 'teacher') return
+        if (!canReadSupervision(nextRole)) return
         const [sessions, options] = await Promise.all([
           client.from('academic_supervisions').select(columns).order('updated_at', { ascending: false }).order('id')
             .range(page * 20, page * 20 + 20).abortSignal(controller.signal).overrideTypes<Session[], { merge: false }>(),
-          nextRole === 'principal' ? client.from('teachers').select('id,name').eq('is_active', true)
-            .order('name').order('id').limit(1000).abortSignal(controller.signal) : null,
+          isPrincipal(nextRole) ? client.from('teachers').select('id,name').eq('is_active', true)
+            .order('name').order('id').limit(1001).abortSignal(controller.signal) : null,
         ])
-        if (sessions.error || options?.error || options?.data?.length === 1000) throw new Error('Unable to load supervision')
+        if (sessions.error || options?.error) throw new Error('Unable to load supervision')
         if (!controller.signal.aborted) {
           setRows(sessions.data ?? [])
-          setTeachers(options?.data ?? [])
+          setTeachers(options?.data?.slice(0, 1000) ?? [])
+          setTeachersTruncated((options?.data?.length ?? 0) > 1000)
         }
       } catch {
         if (!controller.signal.aborted) setLoadError(true)
@@ -176,11 +181,12 @@ function SupervisionWorkspace({ userId }: { userId: string }) {
   return <section className="workspace">
     <h1>Supervisi Akademik</h1>
     {loading ? <LoadingState /> : loadError ? <ErrorNotice onRetry={reload}>Supervisi gagal dimuat.</ErrorNotice>
-      : !principal && role !== 'teacher' ? <EmptyState>Halaman ini tersedia untuk kepala sekolah dan guru.</EmptyState>
+      : !principal && !isTeacher(role) ? <EmptyState>Halaman ini tersedia untuk kepala sekolah dan guru.</EmptyState>
       : <>
         {message && !hasPendingObservation && <p role="status">{message}</p>}
         {error && <p role="alert" className="error">{error}</p>}
         {principal && <details><summary>Laporan supervisi</summary><SupervisionReport key={attempt} /></details>}
+        {principal && <ReferenceNotice truncated={teachersTruncated}/>}
         {principal && !draftId && <button className="button" type="button" disabled={!teachers.length || navigationLocked}
           onClick={() => { setSelected(null); setDraftId(crypto.randomUUID()); setError(''); setMessage('') }}>Jadwalkan supervisi</button>}
         {principal && !teachers.length && <p>Belum ada guru aktif untuk dijadwalkan.</p>}

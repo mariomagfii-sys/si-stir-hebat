@@ -1,47 +1,77 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { DEMO_ACCOUNTS, clearDemoSession, signInDemo } from '../lib/demo-auth'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Bell, BookHeart, ClipboardCheck, KeyRound, LogOut, ShieldCheck, Sparkles, UserRound, UsersRound, type LucideIcon } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from './Auth'
+import { useAuth } from '../components/auth/auth-context'
 import { Profile } from './Profile'
 
+const loginRoles: { id: string; label: string; title: string; detail: string; icon: LucideIcon }[] = [
+  { id: 'student', label: 'Murid', title: 'Hai, teman hebat!', detail: 'Siap belajar, bermain, dan tumbuh hari ini?', icon: BookHeart },
+  { id: 'parent', label: 'Orang tua', title: 'Selamat datang, Ayah/Bunda', detail: 'Temani tumbuh kembang anak melalui ruang sekolah.', icon: UsersRound },
+  { id: 'teacher', label: 'Guru', title: 'Selamat datang, Bapak/Ibu Guru', detail: 'Lanjutkan kegiatan belajar dan pendampingan kelas.', icon: ClipboardCheck },
+  { id: 'principal', label: 'Kepala sekolah', title: 'Selamat datang, Kepala Sekolah', detail: 'Pantau kegiatan dan layanan sekolah.', icon: ShieldCheck },
+  { id: 'administrator', label: 'Administrator', title: 'Selamat datang, Administrator', detail: 'Kelola layanan sekolah sesuai kewenangan akun.', icon: Sparkles },
+]
+
 export function Login() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { session, loading, error: sessionError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [selectedRole, setSelectedRole] = useState(() => loginRoles.some(role => role.id === searchParams.get('ruang')) ? searchParams.get('ruang')! : 'student')
+  const activeRole = loginRoles.find(role => role.id === selectedRole) ?? loginRoles[0]
+  const RoleIcon = activeRole.icon
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy) return
-    if (!supabase) {
-      const demoSession = signInDemo(email, password)
-      if (!demoSession) {
-        setError('Akun demo tidak valid. Gunakan salah satu akun yang tersedia di panel demo.')
-        return
-      }
-      window.location.assign('/dashboard')
+    const client = supabase
+    if (!client) {
+      setError('Konfigurasi Supabase belum tersedia. Periksa pengaturan sekolah.')
       return
     }
 
     setBusy(true)
     setError('')
     try {
-      const { error: failure } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      const { error: failure } = await client.auth.signInWithPassword({ email: email.trim(), password })
       if (failure) setError('Tidak dapat masuk. Periksa email dan kata sandi, lalu coba lagi.')
     } catch { setError('Koneksi bermasalah. Silakan coba lagi.') }
     finally { setBusy(false) }
   }
   if (loading) return <section className="login" role="status">Memuat sesi…</section>
   if (session) return <Navigate to="/dashboard" replace />
-  return <section className="login"><h1>Masuk SI STIR HEBAT</h1><p>Gunakan akun yang diberikan oleh administrator sekolah.</p>
-    {!supabase && <div className="status"><p>Mode demo aktif. Gunakan akun berikut:</p><div className="demo-list">{DEMO_ACCOUNTS.map((account) => <button key={account.email} type="button" className="text-button" onClick={() => { setEmail(account.email); setPassword(account.password) }}>{account.full_name} ({account.role})</button>)}</div></div>}
+  return <section className={`login login-page login-role-${activeRole.id}`} aria-labelledby="login-title" data-role={activeRole.id}>
+    <div className="login-intro">
+      <p className="login-kicker">SDN 03 Wonosari</p>
+      <h1 id="login-title">{activeRole.title}</h1>
+      <p>{activeRole.detail}</p>
+      <div className="login-role-art" aria-hidden="true">
+        <span className="login-art-orbit" />
+        <span className="login-art-icon"><RoleIcon /></span>
+        {activeRole.id === 'student' && <><span className="login-art-spark login-art-spark-one">✦</span><span className="login-art-spark login-art-spark-two">✿</span><span className="login-art-doodle">Ayo belajar!</span></>}
+      </div>
+      <fieldset className="login-role-picker">
+        <legend>Pilih ruang masuk</legend>
+        <div className="login-role-options">{loginRoles.map(role => {
+          const Icon = role.icon
+          return <button key={role.id} type="button" className="login-role-option" aria-pressed={selectedRole === role.id} onClick={() => { setSelectedRole(role.id); setSearchParams({ ruang: role.id }, { replace: true }) }}>
+            <Icon aria-hidden="true"/><span>{role.label}</span>
+          </button>
+        })}</div>
+      </fieldset>
+      <p className="login-role-note">Pilihan ini mengubah tampilan saja. Layanan dan hak akses mengikuti peran pada akun sekolah Anda.</p>
+    </div>
+    <div className="login-panel">
+    <h2>Masuk ke akun sekolah</h2><p>Gunakan email dan kata sandi yang diberikan administrator.</p>
     <form onSubmit={submit}>
       <label htmlFor="email">Email</label><input id="email" type="email" autoComplete="username" required value={email} onChange={event => setEmail(event.target.value)} disabled={busy} />
       <label htmlFor="password">Kata sandi</label><input id="password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} disabled={busy} />
       {(error || sessionError) && <p className="error" role="alert">{error || sessionError}</p>}
       <button className="button" type="submit" disabled={busy}>{busy ? 'Sedang masuk…' : 'Masuk'}</button>
     </form><p><Link to="/lupa-kata-sandi">Lupa kata sandi?</Link></p><p className="help">Belum memiliki akun? Hubungi administrator sekolah.</p><Link to="/">Kembali ke beranda</Link>
+    </div>
   </section>
 }
 
@@ -54,15 +84,74 @@ export function Account() {
     setBusy(true)
     setError('')
     try {
-      if (!supabase) {
-        clearDemoSession()
-        window.location.assign('/')
+      const client = supabase
+      if (!client) {
+        setError('Konfigurasi Supabase belum tersedia.')
         return
       }
-      const { error: failure } = await supabase.auth.signOut({ scope: 'local' })
+      const { error: failure } = await client.auth.signOut({ scope: 'local' })
       if (failure) setError('Belum berhasil keluar. Silakan coba lagi.')
     } catch { setError('Koneksi bermasalah. Silakan coba lagi.') }
     finally { setBusy(false) }
   }
-  return <section className="login"><div className="eyebrow">AKUN SEKOLAH</div><h1>Selamat datang</h1><p>Anda masuk sebagai <strong>{session?.user.email}</strong>.</p>{supabase && session && <p>ID akun sekolah <code>{session.user.id}</code></p>}{session && <Profile key={session.user.id} userId={session.user.id} />}<p><Link to="/pengumuman">Buka pengumuman sekolah</Link></p><p><Link to="/kata-sandi">Ubah kata sandi</Link></p>{error && <p className="error" role="alert">{error}</p>}<button className="button" disabled={busy} onClick={signOut}>{busy ? 'Sedang keluar…' : 'Keluar'}</button></section>
+  return (
+    <section className="board account-page" aria-labelledby="account-title">
+      <header className="account-heading">
+        <div>
+          <p className="account-kicker">Pengaturan akun</p>
+          <h1 id="account-title">Akun sekolah</h1>
+          <p>Kelola identitas dan keamanan akun yang digunakan di SI STIR HEBAT.</p>
+        </div>
+        <span className="account-avatar" aria-hidden="true"><UserRound /></span>
+      </header>
+
+      <div className="account-grid">
+        <article className="account-card account-profile">
+          <div className="account-card-heading">
+            <span className="account-card-icon" aria-hidden="true"><UserRound /></span>
+            <div>
+              <h2>Profil saya</h2>
+              <p>Identitas yang ditampilkan pada layanan sekolah.</p>
+            </div>
+          </div>
+          {session && <dl className="account-meta">
+            <div>
+              <dt>Email akun</dt>
+              <dd>{session.user.email}</dd>
+            </div>
+            {supabase && <div>
+              <dt>ID akun</dt>
+              <dd><code>{session.user.id}</code></dd>
+            </div>}
+          </dl>}
+          {session && <Profile key={session.user.id} userId={session.user.id} />}
+        </article>
+
+        <aside className="account-card account-actions" aria-label="Tindakan akun">
+          <div className="account-card-heading">
+            <span className="account-card-icon" aria-hidden="true"><ShieldCheck /></span>
+            <div>
+              <h2>Keamanan dan akses</h2>
+              <p>Lanjutan pengaturan akun.</p>
+            </div>
+          </div>
+          <nav className="account-links" aria-label="Layanan akun">
+            <Link to="/kata-sandi">
+              <KeyRound aria-hidden="true" />
+              <span><strong>Ubah kata sandi</strong><small>Perbarui kredensial akun</small></span>
+            </Link>
+            <Link to="/pengumuman">
+              <Bell aria-hidden="true" />
+              <span><strong>Pengumuman sekolah</strong><small>Buka kabar terbaru</small></span>
+            </Link>
+          </nav>
+          {error && <p className="error" role="alert">{error}</p>}
+          <button className="button account-sign-out" disabled={busy} onClick={signOut}>
+            <LogOut aria-hidden="true" />
+            {busy ? 'Sedang keluar…' : 'Keluar'}
+          </button>
+        </aside>
+      </div>
+    </section>
+  )
 }

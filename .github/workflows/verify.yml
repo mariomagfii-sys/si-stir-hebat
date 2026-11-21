@@ -6,8 +6,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      VITE_SUPABASE_URL: https://example.supabase.co
-      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_fixture_only
+      CI_FIXTURE: '1'
+      VITE_SUPABASE_URL: https://school-ci.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_abcdefghijklmnopqrstuv_12345678
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

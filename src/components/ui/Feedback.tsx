@@ -11,3 +11,7 @@ export function LoadingState({ children = 'Memuat data…' }: { children?: React
 export function EmptyState({ children }: { children: ReactNode }) {
   return <p className="empty">{children}</p>
 }
+
+export function PendingState({ children }: { children: ReactNode }) {
+  return <p className="status" role="status">{children}</p>
+}

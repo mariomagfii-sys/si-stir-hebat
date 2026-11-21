@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
-import { schoolToday } from '../attendance/attendance-model'
+import { schoolToday } from '../../utils/date'
+import { isStudent, isTeacher } from '../../utils/permissions'
 import { TaskFeedback } from './TaskFeedback'
 
 type Submission = { id: string; student_name: string; answer: string }
@@ -62,18 +63,18 @@ export function TaskSubmissions({ taskId, role, due }: { taskId: string; role: s
   }
 
   return <section>
-    <h3>{role === 'student' ? 'Jawaban saya' : 'Jawaban siswa'}</h3>
+    <h3>{isStudent(role) ? 'Jawaban saya' : 'Jawaban siswa'}</h3>
     {error && <div role="alert">{error} <button type="button" disabled={busy} onClick={() => setAttempt(value => value + 1)}>Muat ulang</button></div>}
     {!rows && !error && <p role="status">Memuat jawaban…</p>}
     {rows?.slice(0, 20).map(row => <article key={row.id}>
-      {role === 'teacher' && <h4>{row.student_name}</h4>}
+      {isTeacher(role) && <h4>{row.student_name}</h4>}
       <p className="announcement-body">{row.answer}</p>
       <TaskFeedback taskId={taskId} submissionId={row.id} role={role} />
     </article>)}
-    {role === 'teacher' && rows?.length === 0 && <p>Belum ada jawaban pada halaman ini.</p>}
+    {isTeacher(role) && rows?.length === 0 && <p>Belum ada jawaban pada halaman ini.</p>}
     {page > 0 && <button type="button" onClick={() => setPage(page - 1)}>Sebelumnya</button>}
     {(rows?.length ?? 0) > 20 && <button type="button" onClick={() => setPage(page + 1)}>Berikutnya</button>}
-    {role === 'student' && rows?.length === 0 && (due < schoolToday()
+    {isStudent(role) && rows?.length === 0 && (due < schoolToday()
       ? <p>Tenggat pengumpulan sudah lewat.</p>
       : <form onSubmit={submit}>
         <label htmlFor="task-answer">Jawaban teks</label>

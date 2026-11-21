@@ -1,0 +1,219 @@
+
+> si-stir-hebat@0.1.0 check
+> node scripts/check-migrations.mjs && node scripts/check-ci.mjs && npm run lint && npm run typecheck && npm test && npm run build
+
+Migration OK: 38 berkas, timestamp unik dan naik.
+Workflow CI OK: 1 berkas valid dan memakai skrip yang tersedia.
+
+> si-stir-hebat@0.1.0 lint
+> eslint . --max-warnings 0
+
+
+> si-stir-hebat@0.1.0 typecheck
+> tsc -b --pretty false
+
+
+> si-stir-hebat@0.1.0 test
+> node --test tests/*.test.mjs
+
+✔ guardian absence report validates date and reason without finalizing attendance (951.4375ms)
+✔ PDF adapter preserves text, zero and ungraded values across combined columns (1.548ms)
+✔ PDF export rejects empty or oversized input instead of issuing an incomplete report (0.4251ms)
+✔ academic report validates inclusive annual ranges and real dates (7.2162ms)
+✔ academic export preserves raw zero, missing results and different maximum scores (5.7124ms)
+✔ development graph isolates stable identities and excludes drafts and ungraded rows (13.107ms)
+✔ student filters use identities and the latest name snapshot rather than merging names (18.6261ms)
+✔ only administrator and principal can manage announcements (1.5607ms)
+✔ only assigned school roles can read announcements (0.3731ms)
+✔ announcement validation rejects blank content and oversized fields (0.4112ms)
+✔ assessment score parser distinguishes blank from zero and enforces decimal bounds (1.59ms)
+✔ import rejects wrong extensions, empty files and oversized input (2.1244ms)
+✔ import validates session identity, headers, participant codes and duplicates (1.5514ms)
+✔ import does not infer absent for omitted or blank rows (1.3076ms)
+✔ import requires correction reasons and preserves expected revisions (0.5835ms)
+✔ import rejects oversized row sets and extra nonempty columns (0.3776ms)
+✔ real XLSX template round-trips text codes and session metadata (662.8352ms)
+✔ XLSX reader rejects formulas, multiple sheets and invalid containers (22.8894ms)
+✔ report date bounds include endpoints and reject impossible dates (11.1463ms)
+✔ report uses stable student identities and latest snapshot without treating unmarked as absent (16.2018ms)
+✔ attendance distinguishes unmarked from absent (13.3215ms)
+✔ attendance requires a valid correction reason and preserves expected revision (0.4454ms)
+✔ school date uses the same timezone as attendance validation (1120.9941ms)
+✔ communication API validates content and never sends author metadata (2.6327ms)
+✔ communication list bounds pages and propagates backend errors (12.6819ms)
+✔ message list uses a sentinel row to report pagination without gaps (0.5077ms)
+✔ recipient API reports further authorized pages without returning the sentinel (0.5244ms)
+✔ message lookup distinguishes an absent result from a failed request (0.6284ms)
+✔ public configuration rejects incomplete, placeholder, or malformed values (1.5759ms)
+✔ public configuration rejects secrets and insecure remote URLs (21.7215ms)
+✔ public configuration accepts only correctly formed publishable keys (1.026ms)
+✔ runtime config is the single source for configured and demo-allowed flags (0.2445ms)
+✔ CSV preserves commas, quotes, newlines and Indonesian text (1.3703ms)
+✔ CSV neutralizes spreadsheet formulas including leading whitespace (1.945ms)
+✔ CSV handles empty values and reports only rows supplied (0.352ms)
+✔ dashboard overview API validates the typed aggregate returned by its RPC (75.4022ms)
+✔ dashboard overview API rejects malformed aggregates and surfaces RPC errors (1.1211ms)
+▶ migrations and database permissions
+  ✔ security foundation guards todos and safely unlinks profile IDs (109.6853ms)
+  ✔ existing and new users receive pending profiles (26.4502ms)
+  ✔ managed event-trigger function is not executable by client roles (1.9705ms)
+  ✔ dashboard overview aggregates only for administrator and principal (44.2057ms)
+  ✔ account relationships enforce role and audit only committed changes (96.156ms)
+  ✔ administrator creates a draft, published item, and archive (20.6528ms)
+  ✔ teacher reads published announcements and cannot write (13.0542ms)
+  ✔ student reads published announcements and cannot write (14.8413ms)
+  ✔ parent reads published announcements and cannot write (9.813ms)
+  ✔ pending users see no announcements (4.4868ms)
+  ✔ anonymous users have no table access (2.5198ms)
+  ✔ principal can edit and archive announcements without changing authorship (8.5066ms)
+  ✔ database rejects blank content and invalid statuses (8.085ms)
+  ✔ administrator creates non-personal master data with enforced constraints (42.2303ms)
+  ✔ principal reads master data but cannot change it (9.6312ms)
+  ✔ teacher reads master data but cannot change it (17.8643ms)
+  ✔ student reads master data but cannot change it (18.3628ms)
+  ✔ parent reads master data but cannot change it (12.6044ms)
+  ✔ pending and anonymous users cannot read master data (18.9552ms)
+  ✔ only one active semester per year is allowed (21.0217ms)
+  ✔ administrator creates teacher/student records without granting account-link privileges (26.9109ms)
+  ✔ principal reads people without editing them (16.1891ms)
+  ✔ teacher only reads the linked record, not another person or registry (10.5915ms)
+  ✔ student only reads the linked record, not another person or registry (8.2212ms)
+  ✔ parent cannot read or add people (5.3731ms)
+  ✔ pending cannot read or add people (5.2162ms)
+  ✔ anon cannot read or add people (6.3142ms)
+  ✔ enrollments enforce capacity, one active class per year and preserve transfer history (94.6358ms)
+  ✔ teacher without an assignment to the active class cannot read its pupils (17.8492ms)
+  ✔ active assignment grants only active enrolled students and no writes (49.4154ms)
+  ✔ student only reads own enrollment history and cannot see teacher assignments (15.2945ms)
+  ✔ principal reads relations without write permission and parents see none (66.5426ms)
+  ✔ deactivating assignment, student or class immediately removes teacher student access (84.4941ms)
+  ✔ class capacity cannot be lowered below enrollment and academic-year changes preserve history (31.4103ms)
+  ✔ attendance sessions snapshot today’s active roster without defaulting to present (54.1047ms)
+  ✔ assigned teacher saves an atomic attendance batch and append-only audit (29.1689ms)
+  ✔ stale revisions and invalid corrections roll back the whole batch (102.4567ms)
+  ✔ student reads only own attendance and no staff correction notes (16.9362ms)
+  ✔ administrator and principal can report attendance but cannot enter it (22.4411ms)
+  ✔ parent/pending/anonymous cannot access attendance (35.19ms)
+  ✔ guardian attendance returns only verified active children and loses access on revocation (32.4042ms)
+  ✔ empty class sessions roll back instead of creating an empty roster (15.614ms)
+  ✔ teachers cannot enumerate or mutate attendance of another assigned teacher’s class (26.5126ms)
+  ✔ revoked teacher assignment immediately removes attendance access and write permission (17.806ms)
+  ✔ attendance import saves changes and metadata once across identical retries (38.5864ms)
+  ✔ attendance import failure rolls back every change and does not write a success log (25.2112ms)
+  ✔ import history and RPC enforce staff, class and role boundaries (43.0375ms)
+  ✔ schedules enforce administrator writes, conflicts, revisions and scoped visibility (170.3414ms)
+  ✔ schedule proposals require assigned teachers and atomic administrator decisions (135.625ms)
+  ✔ assessments snapshot the assigned class and validate metadata (83.7575ms)
+  ✔ assessment scores validate bounds, distinguish zero, and advance revisions before publication (256.0708ms)
+  ✔ published assessment results remain limited to self and verified children (56.494ms)
+  ✔ published score corrections require reasons and append an immutable history (53.939ms)
+  ✔ class task deadlines are required and fixed after publication (82.1089ms)
+  ✔ task feedback protects drafts, publication, audit and verified student relationships (154.5261ms)
+  ✔ class materials remain private until published and follow enrollment and verified guardian access (77.1071ms)
+  ✔ supervision requires four stages and only publishes to the supervised teacher (118.7142ms)
+  ✔ supervision evidence storage policy separates principal, owner teacher and outsiders (138.1144ms)
+  ✔ school document storage follows owner and review access (237.67ms)
+  ✔ teaching modules enforce author edits, principal review, and immutable status audit (80.744ms)
+  ✔ assigned teacher creates immutable journal with server snapshots and author (35.8509ms)
+  ✔ journal validates dates, calendar and content independently of the client (61.8508ms)
+  ✔ journal blocks other teachers and untrusted roles while staff can only read (127.2121ms)
+  ✔ deactivation of journal dependencies revokes teacher read and insert (70.593ms)
+  ✔ communication restricts immutable messages to active teacher and verified guardian (267.1701ms)
+  ✔ student habits separate pending from validated and enforce role scope (118.337ms)
+  ✔ habit_students returns only the caller’s authorized student names (42.607ms)
+  ✔ guardian reports require teacher confirmation to mark absence and rejection leaves attendance unchanged (142.5607ms)
+  ✔ notifications are private to the recipient and read through a server function (128.4737ms)
+  ✔ teacher attendance is idempotent, private, and corrected only by principal approval (58.6631ms)
+  ✔ operator retention order unlinks and deactivates before deleting a synthetic Auth user (25.5431ms)
+  ✔ removing a school role immediately removes read access (8.0566ms)
+✔ migrations and database permissions (11762.339ms)
+✔ production demo auth exposes no login and never stores a demo session (2.8685ms)
+✔ demo sign-in normalizes email but keeps passwords exact (3.6427ms)
+✔ demo session rejects malformed or unknown stored identities (15.2144ms)
+✔ demo profile lookup matches email case-insensitively (2.8908ms)
+✔ demo profile and password changes persist and session can be cleared (1.1811ms)
+✔ build env guard accepts only a valid publishable configuration (285.6308ms)
+✔ build env guard rejects missing, placeholder, and non-publishable configuration (740.8658ms)
+✔ CI fixture mode is limited to the fixed synthetic GitHub Actions configuration (456.6908ms)
+✔ journal date filter accepts all dates or an inclusive valid ordered range (4.9631ms)
+✔ journal validates meaningful content and unicode length bounds (0.9901ms)
+✔ journal payload trims only permitted content and never sends author or snapshots (1.4334ms)
+✔ statusKetuntasan applies KKM threshold with decimal precision (2.7157ms)
+✔ statusKetuntasan supports decimal maximum and zero scores (0.4565ms)
+✔ statusKetuntasan marks missing values as belum dinilai (0.259ms)
+✔ school identity validates optional NPSN and required name (1.8433ms)
+✔ calendar validates date ordering and numeric boundaries (2.0837ms)
+✔ master mutations send only permitted fields with typed values (1.6871ms)
+✔ people registry has narrower permissions than non-personal school settings (0.4606ms)
+✔ people records validate code and name without accepting account identifiers (0.5691ms)
+✔ notification page rejects invalid values (107.4797ms)
+✔ rejects empty and short passwords even when confirmation matches (0.8865ms)
+✔ requires an exact confirmation including surrounding spaces (0.1465ms)
+✔ accepts matching passwords at the minimum length and above (0.2305ms)
+✔ school documents API uses bounded pagination and omits private payload fields (55.4419ms)
+✔ document status API uses revision guard and requires a reason for revision requests (0.5838ms)
+✔ document upload enforces client bounds and discards only an unuploaded draft on failure (282.0432ms)
+✔ habit draft validates seven boolean indicators and school date (84.9523ms)
+✔ habit validation requires a non-empty bounded note and revision (1.3841ms)
+✔ teacher attendance API sends exact idempotency parameters (83.7279ms)
+✔ teacher correction API checks payload and forwards optimistic revision (1.0345ms)
+ℹ tests 140
+ℹ suites 0
+ℹ pass 140
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13399.0212
+
+> si-stir-hebat@0.1.0 prebuild
+> node scripts/guard-env.mjs
+
+Konfigurasi build valid.
+
+> si-stir-hebat@0.1.0 build
+> tsc -b && vite build && node scripts/check-demo-bundle.mjs
+
+vite v6.4.6 building for production...
+transforming...
+✓ 1787 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                 1.04 kB │ gzip:   0.55 kB
+dist/assets/xlsx.worker-DsA5i1sX.js            58.37 kB
+dist/assets/index-pq68mBEh.css                 31.69 kB │ gzip:   6.74 kB
+dist/assets/date-BP3ee1X8.js                    0.28 kB │ gzip:   0.23 kB
+dist/assets/ReferenceNotice-lXIbXaXG.js         0.30 kB │ gzip:   0.24 kB
+dist/assets/csv-B1D35-QB.js                     0.45 kB │ gzip:   0.34 kB
+dist/assets/Feedback-Dir4hv9A.js                0.47 kB │ gzip:   0.27 kB
+dist/assets/attendance-model-CZIwgd2Q.js        0.72 kB │ gzip:   0.44 kB
+dist/assets/GuardianPortal-jUkUZ4zs.js          2.42 kB │ gzip:   1.11 kB
+dist/assets/academic-report-pdf-CFgpIAGh.js     2.96 kB │ gzip:   1.52 kB
+dist/assets/NotificationCenter-dUi-K1ON.js      4.57 kB │ gzip:   1.88 kB
+dist/assets/AccountRelationships-PonH096a.js    5.07 kB │ gzip:   2.09 kB
+dist/assets/Announcements-OMD17uEc.js           5.25 kB │ gzip:   2.05 kB
+dist/assets/Communication-DbvBXDjZ.js           7.25 kB │ gzip:   2.67 kB
+dist/assets/TeachingModules-DpjpKHxK.js         7.81 kB │ gzip:   2.69 kB
+dist/assets/AbsenceReports-DeT0FfAd.js          9.30 kB │ gzip:   3.52 kB
+dist/assets/MasterData-Ck58JDnJ.js             10.84 kB │ gzip:   4.22 kB
+dist/assets/Journals-CFKC0Ldu.js               11.56 kB │ gzip:   4.28 kB
+dist/assets/StudentHabits-ByYqmkse.js          13.17 kB │ gzip:   4.73 kB
+dist/assets/ClassMaterials-CjeWW3Ez.js         13.43 kB │ gzip:   4.19 kB
+dist/assets/Schedules-BWjMdjkn.js              14.28 kB │ gzip:   4.67 kB
+dist/assets/TeacherAttendance-CWTWmcH6.js      14.80 kB │ gzip:   4.29 kB
+dist/assets/SchoolDocuments-B2qj-KmH.js        15.21 kB │ gzip:   5.11 kB
+dist/assets/AcademicSupervision-qAn6avxp.js    17.39 kB │ gzip:   5.85 kB
+dist/assets/Assessments-DoKmaQdn.js            24.93 kB │ gzip:   7.45 kB
+dist/assets/Attendance-ThdbC1zP.js             28.43 kB │ gzip:   9.36 kB
+dist/assets/index-CoYEjkDk.js                  43.01 kB │ gzip:  12.55 kB
+dist/assets/supabase-C74kNiT6.js              222.64 kB │ gzip:  58.05 kB
+dist/assets/vendor-DRI5dc8k.js                349.52 kB │ gzip: 107.01 kB
+dist/assets/pdf-fonts-C4W4AksE.js             419.57 kB │ gzip: 225.08 kB
+dist/assets/pdf-engine-JFEx8ER4.js            790.69 kB │ gzip: 296.59 kB
+✓ built in 9.78s
+Bundel produksi OK: 29 berkas JavaScript tanpa akun demo.
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

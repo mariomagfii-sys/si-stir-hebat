@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../components/auth/auth-context'
 import { supabase } from '../../lib/supabase'
 import { ErrorNotice, LoadingState, EmptyState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
+import { canReadAssessmentData, isTeacher } from '../../utils/permissions'
 import { assessmentFields, assessmentTypes, parseScore, type Assessment } from './assessment-model'
 import { AssessmentDetail } from './AssessmentDetail'
 import { AcademicReport } from './AcademicReport'
 
 type Assignment = { id: string; school_classes: { name: string }; subjects: { name: string } }
-const roles = ['teacher', 'administrator', 'principal', 'student', 'parent']
 
 export function Assessments() {
   const { session } = useAuth()
@@ -26,6 +27,7 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [attempt, setAttempt] = useState(0)
+  const [optionsTruncated, setOptionsTruncated] = useState(false)
 
   useEffect(() => {
     const client = supabase
@@ -33,6 +35,7 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
     const controller = new AbortController()
     setLoading(true)
     setLoadError(false)
+    setOptionsTruncated(false)
     void (async () => {
       try {
         const profile = await client.from('profiles').select('role').eq('id', userId).abortSignal(controller.signal).maybeSingle()
@@ -40,18 +43,19 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
         const nextRole = profile.data?.role ?? ''
         if (controller.signal.aborted) return
         setRole(nextRole)
-        if (!roles.includes(nextRole)) return
+        if (!canReadAssessmentData(nextRole)) return
         const [list, options] = await Promise.all([
           client.from('assessments').select(assessmentFields).order('held_on', { ascending: false }).order('id')
             .range(page * 20, page * 20 + 20).abortSignal(controller.signal),
-          nextRole === 'teacher' ? client.from('teacher_assignments').select('id,school_classes!inner(name),subjects!inner(name)')
+          isTeacher(nextRole) ? client.from('teacher_assignments').select('id,school_classes!inner(name),subjects!inner(name)')
             .eq('is_active', true).eq('school_classes.is_active', true).eq('subjects.is_active', true)
-            .limit(1000).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
+            .limit(1001).abortSignal(controller.signal).overrideTypes<Assignment[], { merge: false }>() : null,
         ])
-        if (list.error || options?.error || options?.data?.length === 1000) throw new Error('Assessment unavailable')
+        if (list.error || options?.error) throw new Error('Assessment unavailable')
         if (!controller.signal.aborted) {
           setRows(list.data as Assessment[])
-          setAssignments(options?.data ?? [])
+          setAssignments(options?.data?.slice(0, 1000) ?? [])
+          setOptionsTruncated((options?.data?.length ?? 0) > 1000)
         }
       } catch {
         if (!controller.signal.aborted) setLoadError(true)
@@ -64,7 +68,7 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!supabase || busy || role !== 'teacher' || !creating) return
+    if (!supabase || busy || !isTeacher(role) || !creating) return
     const fields = new FormData(event.currentTarget)
     const title = String(fields.get('title') ?? '').trim()
     const maximum = parseScore(String(fields.get('maximum') ?? ''), 100000)
@@ -92,12 +96,13 @@ function AssessmentWorkspace({ userId }: { userId: string }) {
     <h1>Asesmen dan Nilai</h1>
     <p>Skema sementara: nilai maksimum ditentukan per asesmen dan hasil dibagikan setelah guru menerbitkannya. Perhitungan rapor menunggu skema resmi sekolah.</p>
     {loading ? <LoadingState /> : loadError ? <ErrorNotice onRetry={reload}>Asesmen gagal dimuat.</ErrorNotice>
-      : !roles.includes(role) ? <EmptyState>Akun ini belum memiliki akses asesmen.</EmptyState> : <>
+      : !canReadAssessmentData(role) ? <EmptyState>Akun ini belum memiliki akses asesmen.</EmptyState> : <>
         <details><summary>Rekap dan perkembangan akademik</summary><AcademicReport role={role} /></details>
+        {isTeacher(role) && <ReferenceNotice truncated={optionsTruncated}/>}
         {error && <ErrorNotice onRetry={reload}>{error}</ErrorNotice>}
-        {role === 'teacher' && !creating && <button className="button" type="button" disabled={!assignments.length}
+        {isTeacher(role) && !creating && <button className="button" type="button" disabled={!assignments.length}
           onClick={() => setCreating(crypto.randomUUID())}>Buat asesmen</button>}
-        {role === 'teacher' && !assignments.length && <p>Belum ada penugasan aktif.</p>}
+        {isTeacher(role) && !assignments.length && <p>Belum ada penugasan aktif.</p>}
         {creating && <form className="announcement-editor" onSubmit={create}>
           <h2>Asesmen baru</h2>
           <p>Peserta diambil dari siswa aktif di kelas saat asesmen dibuat. Nilai kosong berarti belum dinilai.</p>

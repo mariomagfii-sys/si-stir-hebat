@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
+import { isParent, isTeacher } from '../../utils/permissions'
 
 type Feedback = {
   id: string; student_name: string; feedback: string
@@ -15,7 +16,7 @@ export function TaskFeedback({ taskId, submissionId, role }: { taskId: string; s
   const [confirm, setConfirm] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [page, setPage] = useState(0)
-  const editable = role === 'teacher' && Boolean(submissionId)
+  const editable = isTeacher(role) && Boolean(submissionId)
   const current = rows?.[0]
 
   useEffect(() => {
@@ -68,8 +69,8 @@ export function TaskFeedback({ taskId, submissionId, role }: { taskId: string; s
     {message && <p role="status">{message}</p>}
     {!rows && !error && <p role="status">Memuat umpan balik…</p>}
     {rows?.slice(0, 20).map(row => <div key={row.id}>
-      {role === 'parent' && <h5>{row.student_name}</h5>}
-      <p>{row.status === 'draft' ? 'Draf — belum dibagikan' : 'Terbit'}</p>
+      {isParent(role) && <h5>{row.student_name}</h5>}
+      <p>{row.status === 'draft' ? 'Draf, belum dibagikan' : 'Terbit'}</p>
       <p className="announcement-body">{row.feedback}</p>
     </div>)}
     {rows?.length === 0 && !editable && <p>Belum ada umpan balik yang diterbitkan.</p>}

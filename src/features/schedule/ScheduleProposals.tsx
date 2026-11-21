@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { isAdministrator } from '../../utils/permissions'
 
 type Slot = { weekday: number; start_minute: number; end_minute: number; effective_from: string; effective_until: string }
 type Proposal = Slot & { id: string; reason: string; status: string; decision_reason: string | null; original: Slot & { class_name: string; teacher_name: string; subject_name: string } }
@@ -33,7 +34,7 @@ export function ScheduleProposals({ role, onApplied }: { role: string; onApplied
   }, [page, status, attempt])
   async function decide(event: FormEvent<HTMLFormElement>, id: string) {
     event.preventDefault()
-    if (!supabase || busy || error || role !== 'administrator') return
+    if (!supabase || busy || error || !isAdministrator(role)) return
     const form = new FormData(event.currentTarget)
     setBusy(true)
     try {
@@ -50,7 +51,7 @@ export function ScheduleProposals({ role, onApplied }: { role: string; onApplied
     {loading ? <LoadingState /> : failed ? <ErrorNotice onRetry={() => setAttempt(n => n + 1)}>Usulan gagal dimuat.</ErrorNotice> : <>
       {!rows.length && <p>Belum ada usulan pada status ini.</p>}
       {rows.slice(0, 20).map(p => <article className="tile" key={p.id}><h3>{p.original.subject_name} · {p.original.class_name}</h3><p>{p.original.teacher_name}</p><p>Semula: {slot(p.original)}</p><p>Usulan: {slot(p)}</p><p>Alasan: {p.reason}</p>{p.decision_reason && <p>Catatan keputusan: {p.decision_reason}</p>}
-        {role === 'administrator' && p.status === 'pending' && <form onSubmit={event => void decide(event, p.id)}><fieldset disabled={busy || !!error}><label>Keputusan<select name="decision" required defaultValue=""><option value="">Pilih keputusan</option><option value="accept">Setujui dan terapkan</option><option value="reject">Tolak usulan</option></select></label><label>Alasan keputusan<textarea name="reason" required minLength={5} maxLength={500} /></label><p>Persetujuan mengganti seluruh rentang jadwal dengan usulan di atas dan langsung berlaku bagi pengguna terkait.</p><button type="submit">Simpan keputusan</button></fieldset></form>}
+        {isAdministrator(role) && p.status === 'pending' && <form onSubmit={event => void decide(event, p.id)}><fieldset disabled={busy || !!error}><label>Keputusan<select name="decision" required defaultValue=""><option value="">Pilih keputusan</option><option value="accept">Setujui dan terapkan</option><option value="reject">Tolak usulan</option></select></label><label>Alasan keputusan<textarea name="reason" required minLength={5} maxLength={500} /></label><p>Persetujuan mengganti seluruh rentang jadwal dengan usulan di atas dan langsung berlaku bagi pengguna terkait.</p><button type="submit">Simpan keputusan</button></fieldset></form>}
       </article>)}
       <button disabled={busy || page === 0} onClick={() => setPage(n => n - 1)}>Usulan sebelumnya</button><span>Halaman {page + 1}</span><button disabled={busy || rows.length <= 20} onClick={() => setPage(n => n + 1)}>Usulan berikutnya</button>
     </>}

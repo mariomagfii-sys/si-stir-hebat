@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../components/auth/auth-context'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
 import { supabase } from '../../lib/supabase'
 import { attendanceLabels, type AttendanceStatus } from '../attendance/attendance-model'
+import { isParent } from '../../utils/permissions'
 
 type Child = {
   id: string
@@ -35,7 +36,7 @@ function GuardianAttendance({ userId }: { userId: string }) {
           .abortSignal(controller.signal).maybeSingle()
         if (profile.error) throw profile.error
         if (controller.signal.aborted) return
-        if (profile.data?.role !== 'parent') {
+        if (!isParent(profile.data?.role)) {
           setResult({ state: 'denied' })
           return
         }
@@ -68,7 +69,7 @@ function GuardianAttendance({ userId }: { userId: string }) {
         <h2>{child.name}</h2>
         {child.attendance.length === 0
           ? <EmptyState>Belum ada catatan kehadiran.</EmptyState>
-          : <div className="table-scroll">
+          : <div className="table-scroll" role="region" aria-label="Tabel kehadiran anak yang dapat digeser" tabIndex={0}>
             <table>
               <caption>Hingga 30 catatan kehadiran terbaru</caption>
               <thead><tr><th scope="col">Tanggal</th><th scope="col">Status</th></tr></thead>

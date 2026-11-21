@@ -1,0 +1,14 @@
+---
+description: Project guidance for SI STIR HEBAT
+alwaysApply: true
+---
+
+# SI STIR HEBAT
+
+- Treat the root `AGENTS.md` as the authoritative project and safety guide. Read it along with `PROJECT_CONTEXT.md`, `docs/PROJECT_STATUS.md`, and `docs/DECISIONS.md` before domain or permission changes.
+- Preserve the React/Vite/TypeScript architecture and existing work. Do not use the separate `D:\code\my-app` project as this app's source.
+- Never print or expose `.env.local`, credentials, tokens, student data, or other private information.
+- Enforce authorization in PostgreSQL/RLS and server validation, not only in the UI.
+- Do not apply migrations to the hosted Supabase project, deploy, push, or alter production data without explicit approval.
+- Use the existing Supabase Agent Skills under `.agents/skills` when relevant.
+- Run the narrowest relevant tests and record verified results in `docs/PROJECT_STATUS.md`.

@@ -4,11 +4,8 @@ export type AttendanceRecord = { id: string; session_id: string; student_code: s
 export type AttendanceDraft = Record<string, { status: string; reason: string }>
 export type AttendanceChange = { id: string; status: AttendanceStatus; revision: number; reason: string }
 
-export function schoolToday(date = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
-  const part = (type: string) => parts.find(value => value.type === type)?.value
-  return `${part('year')}-${part('month')}-${part('day')}`
-}
+// Re-ekspor sampai impor tes dipindah ke src/utils/date.ts (berkas tes milik Codex).
+export { schoolToday } from '../../utils/date.ts'
 
 export function attendanceSummary(records: AttendanceRecord[]) {
   const counts = { present: 0, sick: 0, excused: 0, absent: 0, unmarked: 0 }

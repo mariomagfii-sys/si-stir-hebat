@@ -1,11 +1,12 @@
-import { canReadJournals } from '../../lib/school'
+import { canReadJournals, isTeacher } from '../../utils/permissions'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../app/Auth'
+import { useAuth } from '../../components/auth/auth-context'
 import { supabase } from '../../lib/supabase'
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui/Feedback'
+import { ReferenceNotice } from '../../components/ui/ReferenceNotice'
 import { createCsv, downloadCsv } from '../../utils/csv'
-import { schoolToday } from '../attendance/attendance-model'
+import { schoolToday } from '../../utils/date'
 import { journalPayload, validateJournal, validateJournalRange, type JournalDraft } from './journal-model'
 
 type Journal = JournalDraft & { id:string; held_on:string; class_name:string; subject_name:string; teacher_name:string; academic_year_name:string; created_at:string }
@@ -36,11 +37,12 @@ function JournalWorkspace({userId}:{userId:string}) {
   const [end,setEnd]=useState('')
   const [range,setRange]=useState({start:'',end:''})
   const [filterError,setFilterError]=useState('')
+  const [choicesTruncated,setChoicesTruncated]=useState(false)
   const filterDirty=start!==range.start || end!==range.end
   const allowed=canReadJournals(role)
   useEffect(()=>{
     let active=true
-    setLoading(true);setError('');setRows([]);setChoices([])
+    setLoading(true);setError('');setRows([]);setChoices([]);setChoicesTruncated(false)
     async function load() {
       try {
         if(!supabase) throw new Error('configuration')
@@ -57,16 +59,16 @@ function JournalWorkspace({userId}:{userId:string}) {
         if(journal.error) throw journal.error
         if(!active) return
         setRows((journal.data??[]).slice(0,pageSize) as Journal[]);setHasNext((journal.data?.length??0)>pageSize)
-        if(nextRole==='teacher') {
+        if(isTeacher(nextRole)) {
           const [teacher,assignments,classes,subjects,years]=await Promise.all([
             client.from('teachers').select('id').eq('profile_id',userId).eq('is_active',true).maybeSingle(),
-            client.from('teacher_assignments').select('id,teacher_id,class_id,subject_id').eq('is_active',true).limit(1000),
-            client.from('school_classes').select('id,name,academic_year_id').eq('is_active',true).limit(1000),
-            client.from('subjects').select('id,name').eq('is_active',true).limit(1000),
-            client.from('academic_years').select('id,name').limit(200),
+            client.from('teacher_assignments').select('id,teacher_id,class_id,subject_id').eq('is_active',true).limit(1001),
+            client.from('school_classes').select('id,name,academic_year_id').eq('is_active',true).limit(1001),
+            client.from('subjects').select('id,name').eq('is_active',true).limit(1001),
+            client.from('academic_years').select('id,name').limit(201),
           ])
           for(const result of [teacher,assignments,classes,subjects,years]) if(result.error) throw result.error
-          if([assignments,classes,subjects].some(result=>(result.data?.length??0)>=1000) || (years.data?.length??0)>=200) throw new Error('Reference limit')
+          if(active) setChoicesTruncated([assignments,classes,subjects].some(result=>(result.data?.length??0)>1000) || (years.data?.length??0)>200)
           const options=(assignments.data??[]).filter(item=>item.teacher_id===teacher.data?.id).flatMap(item=>{
             const classroom=classes.data?.find(row=>row.id===item.class_id)
             const subject=subjects.data?.find(row=>row.id===item.subject_id)
@@ -95,7 +97,7 @@ function JournalWorkspace({userId}:{userId:string}) {
     setConfirm(false);setSaveError('');setMessage('')
   }
   async function persist() {
-    if(!supabase || !editor || saving || role!=='teacher') return
+    if(!supabase || !editor || saving || !isTeacher(role)) return
     setSaving(true);setSaveError('');setMessage('')
     const payload={id:editor.id,held_on:editor.held_on,...journalPayload(editor.draft)}
     try {
@@ -123,7 +125,8 @@ function JournalWorkspace({userId}:{userId:string}) {
     {allowed && <form className="announcement-editor" aria-label="Filter tanggal jurnal" onSubmit={event=>{event.preventDefault();applyRange(start,end)}}><fieldset className="journal-fields" disabled={loading || saving || Boolean(editor)}><legend>Filter tanggal jurnal</legend><p>Tanggal awal dan akhir ikut dihitung. Kosongkan keduanya untuk semua tanggal. CSV hanya memuat halaman hasil yang ditampilkan.</p><label htmlFor="journal-start">Tanggal awal jurnal</label><input id="journal-start" type="date" value={start} onChange={event=>{setStart(event.target.value);setFilterError('')}}/><label htmlFor="journal-end">Tanggal akhir jurnal</label><input id="journal-end" type="date" value={end} onChange={event=>{setEnd(event.target.value);setFilterError('')}}/><div className="actions"><button className="button" type="submit">Terapkan filter jurnal</button><button className="button secondary" type="button" onClick={()=>applyRange('','')}>Semua tanggal</button></div></fieldset>{filterError && <ErrorNotice>{filterError}</ErrorNotice>}{filterDirty && <p className="help">Perubahan filter belum diterapkan. Ekspor dinonaktifkan sampai filter diterapkan atau dikembalikan ke nilai sebelumnya.</p>}</form>}
     {loading ? <LoadingState/> : error ? <ErrorNotice onRetry={()=>setAttempt(value=>value+1)}>{error}</ErrorNotice> : !allowed ? <EmptyState>Jurnal mengajar hanya tersedia bagi guru bertugas, kepala sekolah, dan administrator.</EmptyState> : <>
       <p className="help">Guru membuat catatan hari ini (Asia/Jakarta) sesuai kalender kelas. Catatan tersimpan tidak dapat diedit atau dihapus pada tahap ini. Administrator dan kepala sekolah membaca tanpa menyetujui atau mengubah isi. Nama guru/kelas/mapel/tahun disalin saat pencatatan.</p>
-      {role==='teacher' && !editor && <><button className="button" disabled={!choices.length} onClick={openEditor}>Catat jurnal hari ini</button>{!choices.length && <EmptyState>Belum ada penugasan aktif yang terhubung dengan akun Anda.</EmptyState>}</>}
+      {isTeacher(role) && <ReferenceNotice truncated={choicesTruncated}/>}
+      {isTeacher(role) && !editor && <><button className="button" disabled={!choices.length} onClick={openEditor}>Catat jurnal hari ini</button>{!choices.length && <EmptyState>Belum ada penugasan aktif yang terhubung dengan akun Anda.</EmptyState>}</>}
       {editor && <form className="announcement-editor" onSubmit={event=>{event.preventDefault();const invalid=validateJournal(editor.draft);setSaveError(invalid);if(!invalid) setConfirm(true)}}><h2>Catatan baru · {editor.held_on}</h2><fieldset className="journal-fields" disabled={saving || confirm}><legend>Isi jurnal</legend><label htmlFor="journal-assignment">Penugasan jurnal</label><select id="journal-assignment" value={editor.draft.assignment_id} onChange={event=>setEditor({...editor,draft:{...editor.draft,assignment_id:event.target.value}})} required><option value="">Pilih kelas dan mata pelajaran</option>{choices.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select>
         <label htmlFor="journal-topic">Topik</label><input id="journal-topic" maxLength={160} required value={editor.draft.topic} onChange={event=>setEditor({...editor,draft:{...editor.draft,topic:event.target.value}})}/>
         <label htmlFor="journal-activities">Kegiatan pembelajaran</label><textarea id="journal-activities" rows={5} maxLength={4000} required value={editor.draft.activities} onChange={event=>setEditor({...editor,draft:{...editor.draft,activities:event.target.value}})}/>
