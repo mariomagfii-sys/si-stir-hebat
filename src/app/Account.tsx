@@ -1,16 +1,28 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { Bell, KeyRound, LogOut, ShieldCheck, UserRound } from 'lucide-react'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Bell, BookHeart, ClipboardCheck, KeyRound, LogOut, ShieldCheck, Sparkles, UserRound, UsersRound, type LucideIcon } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../components/auth/auth-context'
 import { Profile } from './Profile'
 
+const loginRoles: { id: string; label: string; title: string; detail: string; icon: LucideIcon }[] = [
+  { id: 'student', label: 'Murid', title: 'Hai, teman hebat!', detail: 'Siap belajar, bermain, dan tumbuh hari ini?', icon: BookHeart },
+  { id: 'parent', label: 'Orang tua', title: 'Selamat datang, Ayah/Bunda', detail: 'Temani tumbuh kembang anak melalui ruang sekolah.', icon: UsersRound },
+  { id: 'teacher', label: 'Guru', title: 'Selamat datang, Bapak/Ibu Guru', detail: 'Lanjutkan kegiatan belajar dan pendampingan kelas.', icon: ClipboardCheck },
+  { id: 'principal', label: 'Kepala sekolah', title: 'Selamat datang, Kepala Sekolah', detail: 'Pantau kegiatan dan layanan sekolah.', icon: ShieldCheck },
+  { id: 'administrator', label: 'Administrator', title: 'Selamat datang, Administrator', detail: 'Kelola layanan sekolah sesuai kewenangan akun.', icon: Sparkles },
+]
+
 export function Login() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { session, loading, error: sessionError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [selectedRole, setSelectedRole] = useState(() => loginRoles.some(role => role.id === searchParams.get('ruang')) ? searchParams.get('ruang')! : 'student')
+  const activeRole = loginRoles.find(role => role.id === selectedRole) ?? loginRoles[0]
+  const RoleIcon = activeRole.icon
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy) return
@@ -30,13 +42,36 @@ export function Login() {
   }
   if (loading) return <section className="login" role="status">Memuat sesi…</section>
   if (session) return <Navigate to="/dashboard" replace />
-  return <section className="login"><h1>Masuk SI STIR HEBAT</h1><p>Gunakan akun yang diberikan oleh administrator sekolah.</p>
+  return <section className={`login login-page login-role-${activeRole.id}`} aria-labelledby="login-title" data-role={activeRole.id}>
+    <div className="login-intro">
+      <p className="login-kicker">SDN 03 Wonosari</p>
+      <h1 id="login-title">{activeRole.title}</h1>
+      <p>{activeRole.detail}</p>
+      <div className="login-role-art" aria-hidden="true">
+        <span className="login-art-orbit" />
+        <span className="login-art-icon"><RoleIcon /></span>
+        {activeRole.id === 'student' && <><span className="login-art-spark login-art-spark-one">✦</span><span className="login-art-spark login-art-spark-two">✿</span><span className="login-art-doodle">Ayo belajar!</span></>}
+      </div>
+      <fieldset className="login-role-picker">
+        <legend>Pilih ruang masuk</legend>
+        <div className="login-role-options">{loginRoles.map(role => {
+          const Icon = role.icon
+          return <button key={role.id} type="button" className="login-role-option" aria-pressed={selectedRole === role.id} onClick={() => { setSelectedRole(role.id); setSearchParams({ ruang: role.id }, { replace: true }) }}>
+            <Icon aria-hidden="true"/><span>{role.label}</span>
+          </button>
+        })}</div>
+      </fieldset>
+      <p className="login-role-note">Pilihan ini mengubah tampilan saja. Layanan dan hak akses mengikuti peran pada akun sekolah Anda.</p>
+    </div>
+    <div className="login-panel">
+    <h2>Masuk ke akun sekolah</h2><p>Gunakan email dan kata sandi yang diberikan administrator.</p>
     <form onSubmit={submit}>
       <label htmlFor="email">Email</label><input id="email" type="email" autoComplete="username" required value={email} onChange={event => setEmail(event.target.value)} disabled={busy} />
       <label htmlFor="password">Kata sandi</label><input id="password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} disabled={busy} />
       {(error || sessionError) && <p className="error" role="alert">{error || sessionError}</p>}
       <button className="button" type="submit" disabled={busy}>{busy ? 'Sedang masuk…' : 'Masuk'}</button>
     </form><p><Link to="/lupa-kata-sandi">Lupa kata sandi?</Link></p><p className="help">Belum memiliki akun? Hubungi administrator sekolah.</p><Link to="/">Kembali ke beranda</Link>
+    </div>
   </section>
 }
 

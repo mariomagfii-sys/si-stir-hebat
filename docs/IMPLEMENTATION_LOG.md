@@ -660,3 +660,31 @@ Migration 20261114083827 dan API pesan/penerima dibuat dengan RLS, penugasan dan
 
 - Pemilik menetapkan retensi bukti supervisi 1 tahun ajaran, menggantikan nilai D5 sebelumnya (2 tahun). Seed migration `20261121090000_school_configuration.sql`, assertion test PGlite, `docs/DECISIONS.md`, dan `docs/PROSEDUR_RETENSI_OPERATOR.md` telah diselaraskan.
 - Hosted belum berubah; migration konfigurasi sekolah masih lokal. Tidak ada penghapusan otomatis.
+## Styling bersama - 21 November 2026
+
+- Menambahkan Tailwind CSS serta tema bersama untuk navigasi, judul, tabel, formulir, dialog, status, dan responsivitas. Rute dan otorisasi tidak diubah.
+- Lint, typecheck, dan build terisolasi lulus (1.791 modul dan 30 bundel JavaScript tanpa akun demo); peringatan chunk PDF tetap ada. Peninjauan visual setiap fitur dan UAT belum dilakukan.
+
+## Ruang peran pada dashboard - 21 November 2026
+
+- Menambahkan pengantar ruang guru, murid, orang tua, dan kepala sekolah pada dashboard serta tautan laporan ketidakhadiran, 7 Kebiasaan, dan notifikasi sesuai izin UI yang ada. Tidak mengubah akun, peran, atau policy database.
+- Lint, typecheck dan build terisolasi lulus. Pengujian visual/browser dan UAT akun nyata belum dilakukan.
+
+## Tampilan login sesuai peran - 21 November 2026
+
+- Halaman login menyediakan pilihan tampilan bagi Murid, Orang tua, Guru, Kepala Sekolah, dan Administrator. Sapaan, ikon, dan warna panel menyesuaikan pilihan; ruang Murid memakai ornamen ceria berbasis ikon. Pilihan ini tidak memberikan atau mengganti peran. Sesi Supabase, profil, dan pemeriksaan izin yang ada tetap menjadi sumber akses.
+- Layout pemilih menyesuaikan layar kecil, mendukung fokus keyboard, status pilihan terpilih, dan pengurangan gerak. Verifikasi tes atau browser belum dijalankan untuk perubahan ini.
+
+
+## Beranda interaktif dan ruang peran - 21 November 2026
+
+- Beranda memakai hero ilustratif CSS dan ikon, pita kategori layanan bergerak, kartu masuk lima peran, dan ringkasan layanan sekolah. Struktur konten berjenjang mengikuti pendekatan portal informasi publik; aksen ilustrasi dan gerak mengikuti referensi INI LHO ITS. Palet ungu/lilac/biru/pink proyek dipertahankan.
+- Kartu peran membuka /login?ruang=...; pilihan login menyesuaikan sapaan serta ilustrasi. Akses tetap ditentukan profil akun. Layout beradaptasi untuk ponsel dan animasi pita berhenti saat prefers-reduced-motion aktif.
+- Pratinjau desktop Vite lokal port 5173 sudah ditinjau; tes responsif otomatis dan UAT belum dijalankan.
+
+
+## Pemulihan konfigurasi Vite - 21 November 2026
+
+- vite.config.ts ditemukan kosong dan memicu pesan config must export or return an object. Tidak ditemukan salinan lokal di proyek; berkas dipulihkan dari versi Git yang terlacak.
+- Konfigurasi berhasil dimuat oleh Vite. Permintaan halaman lokal membalas HTTP 200 pada port 5173 (server yang sudah berjalan) dan 5174 (server konfirmasi sementara, kemudian dihentikan).
+- git diff --check lulus untuk berkas yang diperbaiki. Tes aplikasi tidak dijalankan.

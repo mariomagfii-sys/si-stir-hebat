@@ -1,0 +1,9 @@
+Suite browser penuh — 21 November 2026
+
+Perintah: node node_modules/playwright/cli.js test --config=.playwright.external.config.ts --workers=1 --trace=off --reporter=list
+Runtime: Node v24.22.3; Playwright 1.65.0; port 5191; desktop 1280x900 dan mobile 390x844.
+Konfigurasi diagnostik sementara adalah salinan playwright.config.ts dengan reuseExistingServer=true. Vite berjalan terpisah di port 5191 dengan konfigurasi Supabase sintetis, tanpa watcher; API browser seluruhnya mock.
+
+Hasil: EXIT 0; 420 passed (7.1m); 0 failed. Terminal melaporkan `420 passed (7.1m)` dan setiap case berstatus `ok`.
+
+Catatan: run awal pada konfigurasi webServer terkelola mencapai case terakhir tetapi tidak keluar saat cleanup karena proses Vite child tertinggal. Run bersih ini memakai server eksternal yang direuse. Config sementara dan server uji telah dibersihkan sesudah run. Ini bukan UAT akun sekolah.

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
-import { BookOpen, GraduationCap, Users, ClipboardCheck, ShieldCheck } from 'lucide-react'
+import { ArrowRight, BookOpen, ClipboardCheck, GraduationCap, HeartHandshake, ShieldCheck, Sparkles, Star, Users } from 'lucide-react'
 import { demoAllowed, isConfigured } from '../lib/config.ts'
 import { AuthProvider, ProtectedRoute } from './Auth'
 import { ConfigMissing } from './ConfigMissing'
@@ -27,29 +27,58 @@ const AbsenceReports = lazy(() => import('../features/parents/AbsenceReports').t
 const SchoolDocuments = lazy(() => import('../features/school-documents/SchoolDocuments').then(module => ({ default: module.SchoolDocuments })))
 const TeacherAttendance = lazy(() => import('../features/attendance/TeacherAttendance').then(module => ({ default: module.TeacherAttendance })))
 const roles = [
-  { icon: ShieldCheck, title: 'Administrator', detail: 'Data sekolah, akun, dan pengaturan akses' },
-  { icon: ClipboardCheck, title: 'Kepala Sekolah', detail: 'Supervisi akademik dan modul ajar' },
-  { icon: BookOpen, title: 'Ruang Guru', detail: 'Modul ajar, materi, absensi, dan jurnal' },
-  { icon: GraduationCap, title: 'Ruang Murid', detail: 'Materi, tugas, dan asesmen' },
-  { icon: Users, title: 'Ruang Orang Tua', detail: 'Kehadiran anak dan informasi sekolah' },
+  { id: 'student', icon: GraduationCap, title: 'Murid', detail: 'Materi, tugas, jadwal, dan perkembangan belajar' },
+  { id: 'parent', icon: Users, title: 'Orang Tua', detail: 'Kehadiran anak dan komunikasi dengan guru' },
+  { id: 'teacher', icon: BookOpen, title: 'Guru', detail: 'Materi, absensi, asesmen, dan jurnal' },
+  { id: 'principal', icon: ClipboardCheck, title: 'Kepala Sekolah', detail: 'Supervisi akademik dan dokumen sekolah' },
+  { id: 'administrator', icon: ShieldCheck, title: 'Administrator', detail: 'Data sekolah, akun, dan pengaturan akses' },
 ]
-function Home() { return <section className="hero" aria-labelledby="home-title">
-  <div className="hero-copy">
-    <p className="hero-context">SDN 03 Wonosari</p>
-    <h1 id="home-title">Ruang untuk <span>tumbuh bersama.</span></h1>
-    <p>Materi, tugas, asesmen, jadwal, dan kabar sekolah dalam satu pintu masuk sesuai peran Anda.</p>
-    <div className="hero-actions"><Link to="/login" className="button">Masuk ke aplikasi</Link></div>
-    <p className="notice">Gunakan akun sekolah yang diberikan administrator. Setiap peran hanya melihat layanan yang menjadi kewenangannya.</p>
+const homeServices = [
+  { icon: BookOpen, tag: 'BELAJAR', title: 'Pembelajaran terarah', detail: 'Materi, tugas, asesmen, dan jadwal mengikuti ruang belajar masing-masing.' },
+  { icon: HeartHandshake, tag: 'MENDAMPINGI', title: 'Tumbuh bersama', detail: 'Guru dan keluarga terhubung untuk mendampingi keseharian murid.' },
+  { icon: ClipboardCheck, tag: 'MENGELOLA', title: 'Layanan sekolah', detail: 'Kehadiran, jurnal, supervisi, dan dokumen tertata sesuai kewenangan.' },
+]
+function Home() { return <div className="home-page">
+  <section className="home-hero" aria-labelledby="home-title">
+    <div className="home-hero-copy">
+      <p className="home-eyebrow"><Sparkles size={15} aria-hidden="true"/> SDN 03 Wonosari <span>Boalemo, Gorontalo</span></p>
+      <h1 id="home-title">Ruang untuk <span>tumbuh bersama.</span></h1>
+      <p className="home-hero-lede">Satu ruang belajar yang terasa dekat untuk murid, keluarga, guru, dan sekolah.</p>
+      <div className="home-hero-actions"><Link to="/login" className="button">Masuk ke aplikasi <ArrowRight size={18} aria-hidden="true"/></Link><a className="home-text-link" href="#ruang-peran">Kenali ruang peran <ArrowRight size={16} aria-hidden="true"/></a></div>
+      <p className="home-hero-note">Gunakan akun sekolah. Layanan yang tersedia mengikuti peran pada akun Anda.</p>
+    </div>
+    <div className="home-hero-art" aria-hidden="true">
+      <span className="home-art-sun"/><span className="home-art-orbit home-art-orbit-one"/><span className="home-art-orbit home-art-orbit-two"/>
+      <span className="home-art-star home-art-star-one"><Star fill="currentColor"/></span><span className="home-art-star home-art-star-two"><Sparkles/></span>
+      <div className="home-art-book"><BookOpen size={42}/><span>Belajar<br/>seru setiap hari</span></div>
+      <div className="home-art-note">Yuk, bertumbuh! <span>✿</span></div>
+      <span className="home-art-dot home-art-dot-one"/><span className="home-art-dot home-art-dot-two"/><span className="home-art-dot home-art-dot-three"/>
+    </div>
+  </section>
+
+  <div className="home-service-ribbon">
+    <p className="sr-only">Materi dan tugas, jadwal dan asesmen, kehadiran, 7 Kebiasaan, serta kabar sekolah.</p>
+    <div className="home-ribbon-track" aria-hidden="true">{[0, 1].map(copy => <span className="home-ribbon-group" key={copy}><span>Materi &amp; tugas</span><Sparkles/><span>Jadwal &amp; asesmen</span><Sparkles/><span>Kehadiran</span><Sparkles/><span>7 Kebiasaan</span><Sparkles/><span>Kabar sekolah</span><Sparkles/></span>)}</div>
   </div>
-  <aside className="role-ledger" aria-labelledby="role-ledger-title">
-    <h2 id="role-ledger-title">Pintu masuk sesuai peran</h2>
-    <p>Lima peran, satu lingkungan sekolah.</p>
-    <ol>{roles.map(({icon: Icon,title,detail},index)=><li key={title}><span className="role-number" aria-hidden="true">{String(index+1).padStart(2,'0')}</span><Icon size={20} aria-hidden="true"/><div><strong>{title}</strong><span>{detail}</span></div></li>)}</ol>
-  </aside>
-</section> }
+
+  <section className="home-section" id="ruang-peran" aria-labelledby="role-entry-title">
+    <header className="home-section-heading"><div><p className="home-section-tag">SATU SEKOLAH, LIMA RUANG</p><h2 id="role-entry-title">Mulai dari ruangmu</h2><p>Pilih ruang untuk melihat tampilan yang sesuai. Hak akses tetap ditentukan oleh akun sekolah.</p></div><span className="home-section-mark" aria-hidden="true">01</span></header>
+    <div className="home-role-grid">{roles.map(({id,icon: Icon,title,detail},index)=><Link key={id} to={`/login?ruang=${id}`} className={`home-role-card home-role-${id}`}>
+      <span className="home-role-card-top"><span className="home-role-icon"><Icon size={23} aria-hidden="true"/></span><span className="home-role-index">{String(index+1).padStart(2,'0')}</span></span>
+      <strong>{title}</strong><span className="home-role-detail">{detail}</span><span className="home-role-enter">Masuk ke ruang ini <ArrowRight size={16} aria-hidden="true"/></span>
+    </Link>)}</div>
+  </section>
+
+  <section className="home-section home-services" aria-labelledby="home-services-title">
+    <header className="home-section-heading"><div><p className="home-section-tag">LAYANAN TERHUBUNG</p><h2 id="home-services-title">Dekat untuk belajar, siap untuk mendampingi</h2><p>Aktivitas sekolah disusun dalam ruang yang mudah dikenali dan digunakan.</p></div><span className="home-section-mark" aria-hidden="true">02</span></header>
+    <div className="home-service-grid">{homeServices.map(({icon: Icon,tag,title,detail})=><article className="home-service-card" key={tag}><span className="home-service-icon"><Icon size={22} aria-hidden="true"/></span><p>{tag}</p><h3>{title}</h3><span>{detail}</span></article>)}</div>
+  </section>
+
+  <section className="home-closing"><div><p className="home-section-tag">BERSAMA WUJUDKAN ANAK INDONESIA HEBAT</p><h2>Siap memulai hari belajar?</h2><p>Masuk dengan akun sekolah untuk membuka ruang dan layanan sesuai peran Anda.</p></div><Link to="/login" className="button">Masuk ke SI STIR HEBAT <ArrowRight size={18} aria-hidden="true"/></Link></section>
+</div> }
 export default function App() {
   if (!isConfigured && !demoAllowed) return <ErrorBoundary><ConfigMissing/></ErrorBoundary>
-  return <ErrorBoundary><BrowserRouter><AuthProvider><a className="skip-link" href="#main-content">Langsung ke isi halaman</a><Header/><main id="main-content" tabIndex={-1}><Suspense fallback={<section className="board" role="status"><p>Memuat halaman…</p></section>}><Routes>
+  return <ErrorBoundary><BrowserRouter><AuthProvider><a className="skip-link" href="#main-content">Langsung ke isi halaman</a><Header/><main id="main-content" className="min-w-0" tabIndex={-1}><Suspense fallback={<section className="board" role="status"><p>Memuat halaman…</p></section>}><Routes>
     <Route path="/" element={<Home/>}/>
     <Route path="/login" element={<Login/>}/>
     <Route path="/lupa-kata-sandi" element={<ForgotPassword/>}/>

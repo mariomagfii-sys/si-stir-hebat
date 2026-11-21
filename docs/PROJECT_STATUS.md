@@ -1,8 +1,18 @@
 # Status SI STIR HEBAT
 
+- **Login sesuai ruang peran:** halaman masuk kini menyediakan pilihan Murid, Orang tua, Guru, Kepala Sekolah, dan Administrator. Pilihan mengganti sapaan, ikon, dan aksen panel; akun Supabase serta profil tetap menentukan sesi dan hak akses. Ruang Murid memakai ikon dan ornamen ceria responsif. Belum diuji secara visual/browser pada perubahan ini.
+
+- **Beranda terinspirasi ITS dan Kemendikdasmen:** hero ilustratif dan pita layanan bergerak dipadukan dengan struktur informasi sekolah dan kartu ruang peran. Tautan peran membuka login dengan pilihan ruang yang cocok. Pratinjau desktop sudah ditinjau pada Vite lokal port 5173; tes responsif otomatis dan UAT belum dijalankan.
+
+- **Vite:** konfigurasi kosong dipulihkan dari Git; server lokal yang sudah berjalan pada port 5173 merespons HTTP 200. Tes aplikasi belum dijalankan.
+
 Diperbarui: 21 November 2026 (Asia/Jakarta). Workspace: `D:/code/SI_STIR_HEBAT_Starter/si-stir-hebat`.
 
 ## Ringkasan
+
+- **Ruang peran:** dashboard lokal menampilkan ruang guru, murid, orang tua, dan kepala sekolah sesuai peran profil, dengan tautan layanan yang mengikuti pemeriksaan izin yang sudah ada. Lint, typecheck, dan build terisolasi lulus; akses memakai akun sekolah nyata belum diuji.
+
+- **Styling 21 November 2026:** Tailwind CSS dan plugin Vite ditambahkan; tema bersama mencakup navigasi, halaman, formulir, tabel, status, dan dialog. Lint, typecheck, dan build terisolasi lulus. Peninjauan visual per fitur dan akun sekolah belum dilakukan; merge Git masih belum selesai.
 
 - **Check lokal:** `npm run check` Node v24.22.3 EXIT 0 pada 21 November: migration/CI check, lint, typecheck, **140/140** tes unit/database, build terisolasi 1.789 modul, audit **30 bundel JavaScript tanpa akun demo**. Log [check-2026-11-21-node24.log](logs/check-2026-11-21-node24.log); peringatan chunk PDF 790,69 kB. Build release `npm run build` juga EXIT 0 pada 21 November: 1.789 modul, 30 bundel JS diaudit tanpa akun demo, output `dist/` berhasil diganti.
 - **Check fase konfigurasi sekolah:** `npm run check` EXIT 0 pada 21 November 2026, **149/149** tes unit/database, 39 migration, build terisolasi 1.789 modul, 30 bundel JavaScript tanpa akun demo. Termasuk 9 test PGlite baru untuk konfigurasi sekolah. Peringatan chunk PDF 790,69 kB tetap ada.

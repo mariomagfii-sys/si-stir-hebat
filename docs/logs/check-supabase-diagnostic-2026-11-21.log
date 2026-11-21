@@ -1,0 +1,9 @@
+Read-only diagnostic summary — 21 November 2026
+
+Runtime: Node v24.22.3.
+Local configuration format: valid (no URL or key values recorded).
+Connected project host comparison: matched (hostname not recorded).
+Network result: DNS lookup failed with ENOTFOUND before the Auth HTTP check.
+No Auth request, database query, row read, or hosted write was performed by this diagnostic.
+
+Conclusion: check:supabase cannot currently verify the hosted schema because the local resolver/network cannot resolve the configured Supabase host. This is not evidence of a hosted policy failure.
